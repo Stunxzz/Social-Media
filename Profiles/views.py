@@ -7,7 +7,7 @@ from django.views.generic import CreateView, DetailView, ListView
 
 from Profiles.forms import ProfileCreationForm, EmailAuthenticationForm, UserProfileForm, PostCreationForm, \
     CommentCreationForm
-from Profiles.models import Profile, UserProfile, Post, Comment
+from Profiles.models import Profile, UserProfile, Post, Comment, ProfilePicture
 
 
 class CreateProfileView(CreateView):
@@ -47,10 +47,18 @@ class UserProfileCreateView(LoginRequiredMixin, CreateView):
         user_profile = form.save(commit=False)
         user_profile.user = self.request.user
         user_profile.save()
+
+        profile_picture = form.cleaned_data.get('profile_picture')
+        if profile_picture:
+            ProfilePicture.objects.update_or_create(user_profile=user_profile, defaults={'image': profile_picture})
+        else:
+            ProfilePicture.objects.update_or_create(user_profile=user_profile,
+                                                    defaults={'image': 'profile_pictures/blank-profil.webp'})
+
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('profile_info')
+        return reverse_lazy('profile_dashboard')
 
 
 class UserPostListView(LoginRequiredMixin, ListView):
@@ -58,14 +66,15 @@ class UserPostListView(LoginRequiredMixin, ListView):
     template_name = 'dashboard.html'
     context_object_name = 'posts'
 
-    def get_queryset(self):
-        return Post.objects.filter(user=self.request.user)
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         posts = self.get_queryset()
         comments = Comment.objects.filter(post__in=posts)
         user_profile = UserProfile.objects.get(user=self.request.user)
+        user_profiles = UserProfile.objects.all()
+        context['user_profiles'] = user_profiles
         context['user_profile'] = user_profile
         context['comments'] = comments
         context['post_form'] = PostCreationForm()

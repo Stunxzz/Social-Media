@@ -1,24 +1,13 @@
 from django.contrib.auth.base_user import AbstractBaseUser
-from django.contrib.auth.models import PermissionsMixin, Group, Permission
+from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from Profiles.managers import CustomUserManager
-
-MAX_NAME = 30
-WORKING_PLACE_CHAR = 100
-
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from django.db import models
-from django.urls import reverse
-from django.utils import timezone
-
-from .managers import CustomUserManager  # Предполагам, че имате създаден такъв мениджър
+from .managers import CustomUserManager
 
 MAX_NAME = 255
 WORKING_PLACE_CHAR = 255
-
 
 class Profile(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
@@ -44,7 +33,6 @@ class Profile(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-
 class UserProfile(models.Model):
     GENDER_CHOICES = [
         ('male', 'Male'),
@@ -61,31 +49,27 @@ class UserProfile(models.Model):
     friends = models.ManyToManyField('self', symmetrical=True, blank=True)
     comments = models.ManyToManyField('Comment', blank=True)
 
+class ProfilePicture(models.Model):
+    user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='profile_pictures/', default='profile_pictures/blank-profil.webp')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
-class Images(models.Model):
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-    profile_picture = models.ImageField(upload_to='static/img/profile_pics/', default='static/img/profile_pics/blank-profile.webp')
-    other_images = models.ManyToManyField('self', blank=True)
-
+class UserImage(models.Model):
+    user_profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='user_images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
 class Post(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"Post by {self.user_profile.first_name} {self.user_profile.last_name}"
-
-
 class Comment(models.Model):
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    pictures = models.ManyToManyField(UserImage, blank=True)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Comment by {self.user_profile.first_name} {self.user_profile.last_name}"
-
 
 class Emoticon(models.Model):
     LIKE = 'like'
@@ -100,11 +84,8 @@ class Emoticon(models.Model):
         (RAGE, 'Rage'),
     ]
 
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     emoticon_type = models.CharField(max_length=10, choices=EMOTICON_CHOICES)
+    related_user_img = models.ForeignKey(UserImage, on_delete=models.CASCADE)
+    related_profile_img = models.ForeignKey(ProfilePicture, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.emoticon_type} by {self.user_profile.first_name} {self.user_profile.last_name}"
-
+    related_comment = models.ForeignKey(Comment, on_delete=models.CASCADE)

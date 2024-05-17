@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import UserCreationForm
-from .models import Profile, Post, Comment, UserProfile
+from .models import Profile, Post, Comment, UserProfile, ProfilePicture
 from django.contrib.auth.forms import AuthenticationForm
 
 
@@ -64,9 +64,11 @@ class CommentCreationForm(forms.ModelForm):
 
 
 class UserProfileForm(forms.ModelForm):
+    profile_picture = forms.ImageField(required=False)
+
     class Meta:
         model = UserProfile
-        fields = ['first_name', 'last_name', 'date_of_birth', 'location', 'gender', 'working_place']
+        fields = ['first_name', 'last_name', 'date_of_birth', 'location', 'gender', 'working_place', 'profile_picture']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -74,6 +76,10 @@ class UserProfileForm(forms.ModelForm):
             'location': forms.TextInput(attrs={'class': 'form-control'}),
             'gender': forms.Select(attrs={'class': 'form-control'}),
             'working_place': forms.TextInput(attrs={'class': 'form-control'}),
-
         }
+
+    def save(self, commit=True):
+        user_profile = super().save(commit=False)
+        return user_profile
+
 
