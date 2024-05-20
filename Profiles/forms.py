@@ -52,6 +52,9 @@ class PostCreationForm(forms.ModelForm):
         widgets = {
             'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+        labels = {
+            'content': 'What do you think?',
+        }
 
 
 class CommentCreationForm(forms.ModelForm):

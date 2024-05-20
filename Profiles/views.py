@@ -66,17 +66,43 @@ class UserPostListView(LoginRequiredMixin, ListView):
     template_name = 'dashboard.html'
     context_object_name = 'posts'
 
-
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        posts = self.get_queryset()
-        comments = Comment.objects.filter(post__in=posts)
         user_profile = UserProfile.objects.get(user=self.request.user)
-        user_profiles = UserProfile.objects.all()
+        user_profiles = UserProfile.objects.exclude(user=self.request.user)
+        posts = Post.objects.all()
+        comments = Comment.objects.filter(post__in=posts)
+
+        context['posts'] = posts
+        context['comments'] = comments
         context['user_profiles'] = user_profiles
         context['user_profile'] = user_profile
-        context['comments'] = comments
         context['post_form'] = PostCreationForm()
         context['comment_form'] = CommentCreationForm()
         return context
+
+    def post(self, request, *args, **kwargs):
+        post_form = PostCreationForm(request.POST)
+        comment_form = CommentCreationForm(request.POST)
+        form_type = request.POST.get('form_type')
+        if form_type == 'post_form' and post_form.is_valid():
+            print('POST')
+            new_post = post_form.save(commit=False)
+            new_post.user = request.user
+            new_post.user_profile = UserProfile.objects.get(user=request.user)
+            new_post.save()
+            return redirect('profile_dashboard')
+
+        elif form_type == 'comment_form':
+            if comment_form.is_valid():
+                new_comment = comment_form.save(commit=False)
+                new_comment.user = request.user
+                new_comment.user_profile = UserProfile.objects.get(user=request.user)
+                post_id = request.POST.get('post_id')
+                post = Post.objects.get(id=post_id)
+                new_comment.post = post
+                new_comment.save()
+
+                return redirect('profile_dashboard')
+
+        return self.get(request, *args, **kwargs)
