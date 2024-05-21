@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+     <div class="container" style="margin-top: 100px">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <form method="post" action="{% url 'edit_profile' %}" class="p-4 border rounded" enctype='multipart/form-data'>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div>
+         <button  style="width: 100%" type="submit" class="btn btn-primary btn-block mb-4">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,13 +1,17 @@
+from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
-from django.shortcuts import redirect
+from django.contrib.messages.views import SuccessMessageMixin
+from django.http import HttpResponseRedirect
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView, ListView
+from django.views import View
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from Profiles.forms import ProfileCreationForm, EmailAuthenticationForm, UserProfileForm, PostCreationForm, \
-    CommentCreationForm
-from Profiles.models import Profile, UserProfile, Post, Comment, ProfilePicture
+from Profiles.forms import ProfileCreationForm, EmailAuthenticationForm, UserProfileForm
+from Profiles.models import Profile, UserProfile
+from posts.models import ProfilePicture
 
 
 class CreateProfileView(CreateView):
@@ -61,48 +65,19 @@ class UserProfileCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('profile_dashboard')
 
 
-class UserPostListView(LoginRequiredMixin, ListView):
-    model = Post
-    template_name = 'dashboard.html'
-    context_object_name = 'posts'
+class EditProfileView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
+    model = UserProfile
+    form_class = UserProfileForm
+    # form_class = ProfilePictureForm
+    template_name = 'edit_profile.html'
+    success_url = reverse_lazy('profile_dashboard')
+    success_message = "Your profile has been updated successfully."
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user_profile = UserProfile.objects.get(user=self.request.user)
-        user_profiles = UserProfile.objects.exclude(user=self.request.user)
-        posts = Post.objects.all()
-        comments = Comment.objects.filter(post__in=posts)
+    def get_object(self, queryset=None):
+        return self.request.user.userprofile
 
-        context['posts'] = posts
-        context['comments'] = comments
-        context['user_profiles'] = user_profiles
-        context['user_profile'] = user_profile
-        context['post_form'] = PostCreationForm()
-        context['comment_form'] = CommentCreationForm()
-        return context
+    def form_valid(self, form):
+        if form.is_valid():
+            form.save()
 
-    def post(self, request, *args, **kwargs):
-        post_form = PostCreationForm(request.POST)
-        comment_form = CommentCreationForm(request.POST)
-        form_type = request.POST.get('form_type')
-        if form_type == 'post_form' and post_form.is_valid():
-            print('POST')
-            new_post = post_form.save(commit=False)
-            new_post.user = request.user
-            new_post.user_profile = UserProfile.objects.get(user=request.user)
-            new_post.save()
-            return redirect('profile_dashboard')
-
-        elif form_type == 'comment_form':
-            if comment_form.is_valid():
-                new_comment = comment_form.save(commit=False)
-                new_comment.user = request.user
-                new_comment.user_profile = UserProfile.objects.get(user=request.user)
-                post_id = request.POST.get('post_id')
-                post = Post.objects.get(id=post_id)
-                new_comment.post = post
-                new_comment.save()
-
-                return redirect('profile_dashboard')
-
-        return self.get(request, *args, **kwargs)
+        return redirect(self.success_url)

@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import UserCreationForm
-from .models import Profile, Post, Comment, UserProfile, ProfilePicture
+from .models import Profile,  UserProfile
 from django.contrib.auth.forms import AuthenticationForm
 
 
@@ -45,33 +45,10 @@ class EmailAuthenticationForm(AuthenticationForm):
         return self.cleaned_data
 
 
-class PostCreationForm(forms.ModelForm):
-    class Meta:
-        model = Post
-        fields = ['content']
-        widgets = {
-            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-        }
-        labels = {
-            'content': 'What do you think?',
-        }
-
-
-class CommentCreationForm(forms.ModelForm):
-    class Meta:
-        model = Comment
-        fields = ['content']
-        widgets = {
-            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-        }
-
-
 class UserProfileForm(forms.ModelForm):
-    profile_picture = forms.ImageField(required=False)
-
     class Meta:
         model = UserProfile
-        fields = ['first_name', 'last_name', 'date_of_birth', 'location', 'gender', 'working_place', 'profile_picture']
+        fields = ['first_name', 'last_name', 'date_of_birth', 'location', 'gender', 'working_place']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -81,8 +58,8 @@ class UserProfileForm(forms.ModelForm):
             'working_place': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-    def save(self, commit=True):
-        user_profile = super().save(commit=False)
-        return user_profile
+        def save(self, commit=True):
+            user_profile = super().save(commit=False)
+            return user_profile
 
 
