@@ -76,6 +76,11 @@ class EditProfileView(SuccessMessageMixin, UpdateView, LoginRequiredMixin):
     def get_object(self, queryset=None):
         return self.request.user.userprofile
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['user_profile'] = self.request.user.userprofile
+        return context
+
     def form_valid(self, form):
         if form.is_valid():
             form.save()

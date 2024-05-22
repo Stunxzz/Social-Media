@@ -4,7 +4,7 @@ from django.views import View
 from django.views.generic import ListView
 from Profiles.models import UserProfile
 from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm
-from posts.models import Post, Comment
+from posts.models import Post, Comment, Album
 
 
 class UserPostListView(LoginRequiredMixin, ListView):
@@ -58,9 +58,17 @@ class CreateAlbumView(View):
     form_class = AlbumForm
     template_name = 'create_album.html'
 
+
     def get(self, request):
         form = self.form_class()
-        return render(request, self.template_name, {'form': form})
+        user_profile = request.user.userprofile
+        albums = Album.objects.filter(user_profile=user_profile)
+        context = {
+            'form': form,
+            'albums': albums,
+            'user_profile': user_profile
+        }
+        return render(request, self.template_name, context)
 
     def post(self, request):
         form = self.form_class(request.POST)
@@ -69,7 +77,9 @@ class CreateAlbumView(View):
             album.user_profile = request.user.userprofile
             album.save()
             return redirect('profile_dashboard')
-        return render(request, self.template_name, {'form': form})
+        user_profile = request.user.userprofile
+        albums = Album.objects.filter(user_profile=user_profile)
+        return render(request, self.template_name, {'form': form, 'albums': albums})
 
 
 class UploadImageView(View):
