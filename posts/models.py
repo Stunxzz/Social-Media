@@ -13,6 +13,7 @@ class ProfilePicture(models.Model):
 class Album(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
+    cover_image = models.ImageField(upload_to='album_pictures/', default='album_pictures/default.png')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

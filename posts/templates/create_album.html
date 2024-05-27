@@ -2,18 +2,24 @@
 {% load static %}
 
 {% block content %}
-<div class="container mt-5">
+    <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <h3>Your Albums</h3>
             {% if albums %}
                 <div class="list-group mb-3">
-                    {% for album in albums %}
-                        <a href="#" class="list-group-item list-group-item-action">
-                            {{ album.title }}
-                        </a>
-                    {% endfor %}
-                </div>
+                {% for album in albums %}
+                    <div class="card mb-3" style="width: 18rem;">
+                        <img src="{{ album.cover_image.url }}" class="card-img-top" alt="{{ album.title }}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ album.title }}</h5>
+                            <a href="{% url 'album_detail' album.id %}" class="btn btn-primary">View</a>
+                              <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#uploadModal-{{ album.id }}">
+                        Upload Image
+                    </button>
+                        </div>
+                    </div>
+                {% endfor %}
             {% else %}
                 <div class="alert alert-info" role="alert">
                     You don't have any albums yet. Create one using the button below!
@@ -22,47 +28,53 @@
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAlbumModal">
                 Create Album
             </button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal -->
-<div class="modal fade" id="createAlbumModal" tabindex="-1" aria-labelledby="createAlbumModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="createAlbumModalLabel">Create Album</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form method="post" action="{% url 'create_album' %}" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {{ form.as_p }}
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-block">Create Album</button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
-</div>
 
-<style>
-    .container {
-        max-width: 900px;
-    }
-    .card {
-        border-radius: 10px;
-    }
-    .card-header {
-        border-top-left-radius: 10px;
-        border-top-right-radius: 10px;
-    }
-    .form-label {
-        font-weight: bold;
-    }
-    .btn-block {
-        width: 100%;
-    }
-</style>
+    <!-- Modal -->
+    <div class="modal fade" id="createAlbumModal" tabindex="-1" aria-labelledby="createAlbumModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="createAlbumModalLabel">Create Album</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="post" action="{% url 'create_album' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-block">Create Album</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .container {
+            max-width: 900px;
+        }
+
+        .card {
+            border-radius: 10px;
+        }
+
+        .card-header {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .form-label {
+            font-weight: bold;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+    </style>
 {% endblock %}
+</div>

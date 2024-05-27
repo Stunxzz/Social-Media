@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.views.generic import ListView
 from Profiles.models import UserProfile
@@ -76,7 +76,7 @@ class CreateAlbumView(View):
             album = form.save(commit=False)
             album.user_profile = request.user.userprofile
             album.save()
-            return redirect('profile_dashboard')
+            return redirect('create_album')
         user_profile = request.user.userprofile
         albums = Album.objects.filter(user_profile=user_profile)
         return render(request, self.template_name, {'form': form, 'albums': albums})
@@ -98,3 +98,34 @@ class UploadImageView(View):
             user_image.save()
             return redirect('profile_dashboard')
         return render(request, self.template_name, {'form': form})
+
+
+
+class AlbumDetailView(View):
+    template_name = 'album_detail.html'
+    form_class = UserImageForm
+
+    def get(self, request, album_id):
+        album = get_object_or_404(Album, id=album_id)
+        images = album.images.all()
+        user_profile = UserProfile.objects.get(user=self.request.user)
+        form = self.form_class()
+        context = {
+            'album': album,
+            'images': images,
+            'user_profile': user_profile,
+            'form': form
+        }
+        return render(request, self.template_name,context)
+
+    def post(self, request, album_id):
+        album = get_object_or_404(Album, id=album_id)
+        form = self.form_class(request.POST, request.FILES)
+        if form.is_valid():
+            user_image = form.save(commit=False)
+            user_image.user_profile = request.user.userprofile
+            user_image.album = album
+            user_image.save()
+            return redirect('album_detail', album_id=album.id)
+        images = album.images.all()
+        return render(request, self.template_name, {'album': album, 'images': images, 'form': form})
