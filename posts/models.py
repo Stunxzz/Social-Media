@@ -10,11 +10,18 @@ class ProfilePicture(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
 
+
 class Album(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     cover_image = models.ImageField(upload_to='album_pictures/', default='album_pictures/default.png')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def get_cover_image(self):
+        last_photo = self.images.order_by('-uploaded_at').first()
+        if last_photo:
+            return last_photo.image.url
+        return self.cover_image.url
 
     def __str__(self):
         return self.title
@@ -25,7 +32,6 @@ class UserImage(models.Model):
     album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name='images', null=True, blank=True)
     image = models.ImageField(upload_to='user_images/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return f"Image uploaded at {self.uploaded_at}"
 

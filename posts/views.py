@@ -1,9 +1,11 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import ListView
+from django.views.generic import ListView, DeleteView
 from Profiles.models import UserProfile
-from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm
+from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm, EmoticonForm
 from posts.models import Post, Comment, Album
 
 
@@ -110,11 +112,15 @@ class AlbumDetailView(View):
         images = album.images.all()
         user_profile = UserProfile.objects.get(user=self.request.user)
         form = self.form_class()
+        comment_form = CommentCreationForm()
+        emoticon_form = EmoticonForm()
         context = {
             'album': album,
             'images': images,
             'user_profile': user_profile,
-            'form': form
+            'form': form,
+            'comment_form': comment_form,
+            'emoticon_form': emoticon_form
         }
         return render(request, self.template_name,context)
 
@@ -128,4 +134,43 @@ class AlbumDetailView(View):
             user_image.save()
             return redirect('album_detail', album_id=album.id)
         images = album.images.all()
-        return render(request, self.template_name, {'album': album, 'images': images, 'form': form})
+        return render(request, self.template_name,
+                      {'album': album, 'images': images, 'form': form})
+class AddCommentView(View):
+    def post(self, request):
+        form = CommentCreationForm(request.POST)
+        if form.is_valid():
+
+            comment_content = form.cleaned_data['content']
+            image_id = form.cleaned_data['image_id']
+            print(comment_content)
+            print(image_id)
+
+            # Вашата логика за създаване на коментар и свързване със снимката
+            # Например:
+            # image = UserImage.objects.get(id=image_id)
+            # Comment.objects.create(user_profile=request.user.userprofile, image=image, content=comment_content)
+        return redirect('album_detail',)
+
+class AddEmoticonView(View):
+    def post(self, request):
+        form = EmoticonForm(request.POST)
+        if form.is_valid():
+            image_id = form.cleaned_data['image_id']
+            emoticon_type = form.cleaned_data['emoticon_type']
+            # Вашата логика за създаване на емотикон и свързване със снимката
+            # Например:
+            # image = UserImage.objects.get(id=image_id)
+            # Emoticon.objects.create(user_profile=request.user.userprofile, image=image, emoticon_type=emoticon_type)
+        return redirect('album_detail')
+
+
+class AlbumDeleteView(DeleteView):
+    model = Album
+    success_url = reverse_lazy('create_album')
+
+    def post(self, request, *args, **kwargs):
+        album_id = kwargs['pk']
+        album = self.get_object()
+        album.delete()
+        return HttpResponseRedirect(self.success_url)

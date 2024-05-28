@@ -1,4 +1,4 @@
-from posts.models import Post, Comment, Album, UserImage
+from posts.models import Post, Comment, Album, UserImage, Emoticon
 from django import forms
 
 class PostCreationForm(forms.ModelForm):
@@ -34,4 +34,10 @@ class AlbumForm(forms.ModelForm):
 class UserImageForm(forms.ModelForm):
     class Meta:
         model = UserImage
-        fields = ['album', 'image']
+        fields = [ 'image']
+
+
+class EmoticonForm(forms.ModelForm):
+    class Meta:
+        model = Emoticon
+        fields = ['emoticon_type']
