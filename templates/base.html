@@ -15,6 +15,8 @@
     <script src="https://unpkg.com/tableexport.jquery.plugin/tableExport.min.js"></script>
     <script src="https://unpkg.com/bootstrap-table@1.22.1/dist/extensions/export/bootstrap-table-export.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'js/custom.js' %}"></script>
 
 </head>
@@ -47,53 +49,53 @@
     </nav>
 {% endblock %}
 {% block sidebar %}
-     <div class="container-fluid">
-    <div class="row">
-        <div class="bg-dark col-auto col-md-2 min-vh-100 side-bar" id="side-bar">
-            <div class="bg-dark p-2">
-                <div style="cursor: pointer" class="d-flex justify-content-end align-items-start mt-3">
-                    <i class="fa-solid fa-circle-arrow-left fa-2x text-white" id="close-sidebar"></i>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="bg-dark col-auto col-md-2 min-vh-100 side-bar" id="side-bar">
+                <div class="bg-dark p-2">
+                    <div style="cursor: pointer" class="d-flex justify-content-end align-items-start mt-3">
+                        <i class="fa-solid fa-circle-arrow-left fa-2x text-white" id="close-sidebar"></i>
+                    </div>
+                    <div class="text-center">
+                        <img src='{{ user_profile.profilepicture.image.url }}' class="rounded-circle mt-5 img-thumbnail"
+                             alt="Profile Picture">
+                        <div class="text-white mt-3">{{ user_profile.first_name }}</div>
+                        <div class="text-white">{{ user_profile.last_name }}</div>
+                    </div>
+                    <ul class="nav nav-pills flex-column mt-4">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link active text-white" aria-current="page">Active</a>
+                        </li>
+                        <li class="nav-item disabled d-flex align-items-center">
+                            <i class="fa-solid fa-user-group text-white"></i>
+                            <a href="#" class="nav-link text-white">My Friends</a>
+                        </li>
+                        <li class="nav-item disabled d-flex align-items-center">
+                            <i class="fa-regular fa-images text-white"></i>
+                            <a href="{% url 'create_album' %}" class="nav-link text-white">My Pictures</a>
+                        </li>
+                        <li class="nav-item disabled d-flex align-items-center">
+                            <i class="fa-solid fa-globe text-white"></i>
+                            <a href="#" class="nav-link text-white">My Hobbies</a>
+                        </li>
+                        <li class="nav-item disabled d-flex align-items-center">
+                            <i class="fa-solid fa-gear text-white"></i>
+                            <a href="{% url 'edit_profile' %}" class="nav-link text-white">Settings</a>
+                        </li>
+                        <li class="nav-item disabled d-flex align-items-center">
+                            <i class="fa-solid fa-arrow-right-to-bracket text-white"></i>
+                            <form action="{% url 'profile_dashboard' %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link text-white d-flex text-decoration-none">
+                                    Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
                 </div>
-                <div class="text-center">
-                    <img src='{{ user_profile.profilepicture.image.url }}' class="rounded-circle mt-5 img-thumbnail"
-                         alt="Profile Picture">
-                    <div class="text-white mt-3">{{ user_profile.first_name }}</div>
-                    <div class="text-white">{{ user_profile.last_name }}</div>
-                </div>
-                <ul class="nav nav-pills flex-column mt-4">
-                    <li class="nav-item">
-                        <a href="#" class="nav-link active text-white" aria-current="page">Active</a>
-                    </li>
-                    <li class="nav-item disabled d-flex align-items-center">
-                        <i class="fa-solid fa-user-group text-white"></i>
-                        <a href="#" class="nav-link text-white">My Friends</a>
-                    </li>
-                    <li class="nav-item disabled d-flex align-items-center">
-                        <i class="fa-regular fa-images text-white"></i>
-                        <a href="{% url 'create_album' %}" class="nav-link text-white">My Pictures</a>
-                    </li>
-                    <li class="nav-item disabled d-flex align-items-center">
-                        <i class="fa-solid fa-globe text-white"></i>
-                        <a href="#" class="nav-link text-white">My Hobbies</a>
-                    </li>
-                    <li class="nav-item disabled d-flex align-items-center">
-                        <i class="fa-solid fa-gear text-white"></i>
-                        <a href="{% url 'edit_profile' %}" class="nav-link text-white">Settings</a>
-                    </li>
-                    <li class="nav-item disabled d-flex align-items-center">
-                        <i class="fa-solid fa-arrow-right-to-bracket text-white"></i>
-                        <form action="{% url 'profile_dashboard' %}" method="post">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-link text-white d-flex text-decoration-none">
-                                Logout
-                            </button>
-                        </form>
-                    </li>
-                </ul>
             </div>
         </div>
     </div>
-     </div>
 {% endblock %}
 {% block content %}
 

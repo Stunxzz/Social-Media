@@ -1,12 +1,12 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView, DeleteView
 from Profiles.models import UserProfile
 from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm, EmoticonForm
-from posts.models import Post, Comment, Album
+from posts.models import Post, Comment, Album, Emoticon, UserImage
 
 
 class UserPostListView(LoginRequiredMixin, ListView):
@@ -19,7 +19,7 @@ class UserPostListView(LoginRequiredMixin, ListView):
         user_profile = UserProfile.objects.get(user=self.request.user)
         user_profiles = UserProfile.objects.exclude(user=self.request.user)
         posts = Post.objects.all().order_by('-created_at')
-        comments = Comment.objects.filter(post__in=posts)
+        comments = Comment.objects.filter(post__in=posts).order_by('-created_at')
 
         context['posts'] = posts
         context['comments'] = comments
@@ -103,6 +103,7 @@ class UploadImageView(View):
 
 
 
+
 class AlbumDetailView(View):
     template_name = 'album_detail.html'
     form_class = UserImageForm
@@ -114,13 +115,15 @@ class AlbumDetailView(View):
         form = self.form_class()
         comment_form = CommentCreationForm()
         emoticon_form = EmoticonForm()
+
         context = {
             'album': album,
             'images': images,
             'user_profile': user_profile,
             'form': form,
             'comment_form': comment_form,
-            'emoticon_form': emoticon_form
+            'emoticon_form': emoticon_form,
+
         }
         return render(request, self.template_name,context)
 
@@ -158,6 +161,7 @@ class AddEmoticonView(View):
         if form.is_valid():
             image_id = form.cleaned_data['image_id']
             emoticon_type = form.cleaned_data['emoticon_type']
+            print(image_id)
             # Вашата логика за създаване на емотикон и свързване със снимката
             # Например:
             # image = UserImage.objects.get(id=image_id)
@@ -174,3 +178,20 @@ class AlbumDeleteView(DeleteView):
         album = self.get_object()
         album.delete()
         return HttpResponseRedirect(self.success_url)
+
+
+class ImageDetailView(View):
+    def get(self, request, image_id):
+        image = get_object_or_404(UserImage, id=image_id)
+        comments = Comment.objects.filter(pictures=image)
+        emoticons = Emoticon.objects.filter(related_user_img=image)
+        emoticon_counts = {'like': 0, 'heart': 0, 'smile': 0, 'rage': 0}
+        for emoticon in emoticons:
+            emoticon_counts[emoticon.emoticon_type] += 1
+
+        comments_data = list(comments.values('id', 'content'))
+        response_data = {
+            'comments': comments_data,
+            'emoticon_counts': emoticon_counts,
+        }
+        return JsonResponse(response_data)
