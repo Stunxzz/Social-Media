@@ -1,5 +1,7 @@
+import json
+
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views import View
@@ -7,6 +9,7 @@ from django.views.generic import ListView, DeleteView
 from Profiles.models import UserProfile
 from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm, EmoticonForm
 from posts.models import Post, Comment, Album, Emoticon, UserImage
+
 
 
 class UserPostListView(LoginRequiredMixin, ListView):
@@ -60,7 +63,6 @@ class CreateAlbumView(View):
     form_class = AlbumForm
     template_name = 'create_album.html'
 
-
     def get(self, request):
         form = self.form_class()
         user_profile = request.user.userprofile
@@ -102,8 +104,6 @@ class UploadImageView(View):
         return render(request, self.template_name, {'form': form})
 
 
-
-
 class AlbumDetailView(View):
     template_name = 'album_detail.html'
     form_class = UserImageForm
@@ -125,7 +125,7 @@ class AlbumDetailView(View):
             'emoticon_form': emoticon_form,
 
         }
-        return render(request, self.template_name,context)
+        return render(request, self.template_name, context)
 
     def post(self, request, album_id):
         album = get_object_or_404(Album, id=album_id)
@@ -139,34 +139,61 @@ class AlbumDetailView(View):
         images = album.images.all()
         return render(request, self.template_name,
                       {'album': album, 'images': images, 'form': form})
+
+
 class AddCommentView(View):
-    def post(self, request):
-        form = CommentCreationForm(request.POST)
-        if form.is_valid():
+    try:
+        def post(self, request):
+            data = json.loads(request.body)
+            image_id = data.get('image_id')
+            content = data.get('content')
+            user_id = data.get('user_id')
+            Comment.objects.create(content=content, pictures_id=image_id, user_profile_id=user_id)
+            return JsonResponse({'success': True})
 
-            comment_content = form.cleaned_data['content']
-            image_id = form.cleaned_data['image_id']
-            print(comment_content)
-            print(image_id)
+    except Exception as e:
+            pass
 
-            # Вашата логика за създаване на коментар и свързване със снимката
-            # Например:
-            # image = UserImage.objects.get(id=image_id)
-            # Comment.objects.create(user_profile=request.user.userprofile, image=image, content=comment_content)
-        return redirect('album_detail',)
 
 class AddEmoticonView(View):
     def post(self, request):
-        form = EmoticonForm(request.POST)
-        if form.is_valid():
-            image_id = form.cleaned_data['image_id']
-            emoticon_type = form.cleaned_data['emoticon_type']
-            print(image_id)
-            # Вашата логика за създаване на емотикон и свързване със снимката
-            # Например:
-            # image = UserImage.objects.get(id=image_id)
-            # Emoticon.objects.create(user_profile=request.user.userprofile, image=image, emoticon_type=emoticon_type)
-        return redirect('album_detail')
+        try:
+            data = json.loads(request.body)
+            image_id = data.get('image_id')
+            emoticon_type = data.get('emoticon_type')
+            user_id = data.get('user_id')
+
+            try:
+                user_image = UserImage.objects.get(id=image_id)
+                user_profile = UserProfile.objects.get(id=user_id)
+            except UserImage.DoesNotExist:
+                return JsonResponse({'error': 'Image not found'}, status=404)
+            except UserProfile.DoesNotExist:
+                return JsonResponse({'error': 'User not found'}, status=404)
+
+            try:
+                emoticon = Emoticon.objects.get(
+                    related_user_img=user_image,
+                    related_user=user_profile
+                )
+
+                if emoticon.emoticon_type == emoticon_type:
+                    emoticon.delete()
+                else:
+
+                    emoticon.emoticon_type = emoticon_type
+                    emoticon.save()
+            except Emoticon.DoesNotExist:
+
+                Emoticon.objects.create(
+                    emoticon_type=emoticon_type,
+                    related_user_img=user_image,
+                    related_user=user_profile
+                )
+
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
 
 class AlbumDeleteView(DeleteView):

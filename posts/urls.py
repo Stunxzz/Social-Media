@@ -11,8 +11,8 @@ urlpatterns = ([
                    path('upload-image/', UploadImageView.as_view(), name='upload_image'),
                    path('album/<int:album_id>/', AlbumDetailView.as_view(), name='album_detail'),
                    path('album/<int:pk>/delete/', AlbumDeleteView.as_view(), name='album_delete'),
-                   path('album/comment/add/', AddCommentView.as_view(), name='add_comment'),
-                   path('album/emoticon/add/', AddEmoticonView.as_view(), name='add_emoticon'),
+                   path('image/comment/add/', AddCommentView.as_view(), name='add_comment'),
+                   path('image/emoticon/add/', AddEmoticonView.as_view(), name='add_emoticon'),
                    path('image/<int:image_id>/', ImageDetailView.as_view(), name='image_detail'),
 
                ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

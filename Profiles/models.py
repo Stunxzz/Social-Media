@@ -47,3 +47,52 @@ class UserProfile(models.Model):
     posts = models.ManyToManyField('posts.Post', blank=True)
     friends = models.ManyToManyField('self', symmetrical=True, blank=True)
     comments = models.ManyToManyField('posts.Comment', blank=True)
+
+    def send_friend_request(self, to_user):
+        try:
+            friend_request = FriendRequest.objects.get(from_user=self.user, to_user=to_user)
+            if friend_request.status == 'pending':
+                friend_request.cancel()
+                return 'Friend request cancelled.'
+            elif friend_request.status == 'rejected':
+                friend_request.status = 'pending'
+                friend_request.save()
+                return 'Friend request re-sent.'
+        except FriendRequest.DoesNotExist:
+            FriendRequest.objects.create(from_user=self.user, to_user=to_user)
+            return 'Friend request sent.'
+
+    def remove_friend(self, friend):
+        self.friends.remove(friend.userprofile)
+        friend.userprofile.friends.remove(self)
+
+
+
+
+
+class FriendRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'pending'),
+        ('accepted', 'accepted'),
+        ('rejected', 'rejected'),
+        ('cancelled', 'cancelled')
+    ]
+
+    from_user = models.ForeignKey(UserProfile, related_name='sent_friend_requests', on_delete=models.CASCADE)
+    to_user = models.ForeignKey(UserProfile, related_name='received_friend_requests', on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def accept(self):
+        self.status = 'accepted'
+        self.save()
+        self.from_user.friends.add(self.to_user)
+        self.to_user.friends.add(self.from_user)
+
+    def reject(self):
+        self.status = 'rejected'
+        self.save()
+
+    def cancel(self):
+        self.status = 'cancelled'
+        self.save()

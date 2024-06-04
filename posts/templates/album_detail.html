@@ -17,9 +17,9 @@
                                 <img class="card-img-top" src="{{ image.image.url }}" alt="{{ image.image }}"
                                      onclick="showImageDetailModal('{{ image.image.url }}', {{ image.id }})">
                             </div>
-                        </div>
+                        </div> <!-- Добавихме затварящия div тук -->
                     {% endfor %}
-                </div>
+                </div> <!-- Затваряме реда тук -->
             </div>
         </div>
     </div>
@@ -67,28 +67,30 @@
                             <img class="img-fluid" src="#" alt="Selected Image" id="selectedImage" style="width: 100%">
                         </div>
                         <div class="col-md-4 mx-auto text-center">
-                            <form method="post" action="{% url 'add_emoticon' %}" id="emoticonForm">
+                            <form method="post" action="" id="emoticonForm">
                                 {% csrf_token %}
                                 <input type="hidden" name="image_id" id="emoticonImageId">
                                 <input type="hidden" name="emoticon_type" id="emoticonTypeField">
+                                <input type="hidden" name="user_id" value="{{ user_profile.id }}">
+                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                                 <div class="btn-group" role="group" aria-label="Emoticons">
                                     <button type="button" class="btn btn-link btn-emoticon"
-                                            onclick="setEmoticonType('like')">
+                                            onclick="setEmoticon('like')">
                                         <i class="fas fa-thumbs-up" style="color: #3b5998"></i>
                                         <span id="likeCount"></span>
                                     </button>
                                     <button type="button" class="btn btn-link btn-emoticon"
-                                            onclick="setEmoticonType('heart')">
+                                            onclick="setEmoticon('heart')">
                                         <i class="fas fa-heart" style="color: #dc143c"></i>
                                         <span id="heartCount"></span>
                                     </button>
                                     <button type="button" class="btn btn-link btn-emoticon"
-                                            onclick="setEmoticonType('smile')">
+                                            onclick="setEmoticon('smile')">
                                         <i class="fas fa-smile" style="color: #ffd700"></i>
                                         <span id="smileCount"></span>
                                     </button>
                                     <button type="button" class="btn btn-link btn-emoticon"
-                                            onclick="setEmoticonType('rage')">
+                                            onclick="setEmoticon('rage')">
                                         <i class="fas fa-angry" style="color: #ff0000;"></i>
                                         <span id="rageCount"></span>
                                     </button>
@@ -97,10 +99,12 @@
 
                             <button class="btn btn-link text-decoration-none mt-3" id="toggleCommentForm">Comments
                             </button>
-                            <form method="post" action="{% url 'add_comment' %}" id="commentForm" class="mt-3">
+                            <form id="commentForm" class="mt-3">
+                                <input type="hidden" name="image_id" id="commentImageId" value="{{ currentImageId }}">
+                                <input type="hidden" name="user_id" id="commentUserId" value="{{ user_profile.id }}">
                                 {% csrf_token %}
                                 {{ comment_form.as_p }}
-                                <button type="submit" class="btn btn-primary">Add Comment</button>
+                                <button type="button" id="submitComment" class="btn btn-primary">Add Comment</button>
                             </form>
 
                             <div id="commentList" class="mt-3">
@@ -129,27 +133,28 @@
         }
     </style>
 
-
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        let currentImageId = null;
+
         function showImageDetailModal(imageUrl, imageId) {
             $('#selectedImage').attr('src', imageUrl);
             $('#imageDetailModal').modal('show');
             loadImageDetails(imageId);
-            console.log(typeof imageId)
+            currentImageId = imageId;
+            $('#commentImageId').val(imageId);
         }
 
         function loadImageDetails(imageId) {
             $.ajax({
-                url: '/posts/image/' + imageId + '/',  // Update the URL here
+                url: '/posts/image/' + imageId + '/',
                 method: 'GET',
                 contentType: 'application/json',
                 dataType: 'json',
                 success: function (response) {
                     // Load comments
                     let commentsHtml = '';
-                    response.comments.forEach(function (comment) {
+                    response.comments.reverse().forEach(function (comment) {
                         commentsHtml += '<p>' + comment.content + '</p>';
                     });
                     $('#commentList').html(commentsHtml);
@@ -162,9 +167,9 @@
                 },
                 error: function (xhr, status, error) {
                     console.error('Error loading image details:', error);
-                    console.log(xhr);  // Debugging line
-                    console.log(status);  // Debugging line
-                    console.log(error);  // Debugging line
+                    console.log(xhr);
+                    console.log(status);
+                    console.log(error);
                 }
             });
         }
@@ -184,6 +189,7 @@
                 }
                 $('#selectedImage').attr('src', images[currentIndex].url);
                 loadImageDetails(images[currentIndex].id);
+                currentImageId = images[currentIndex].id;
             });
 
             $('#nextImage').click(function () {
@@ -193,6 +199,7 @@
                 }
                 $('#selectedImage').attr('src', images[currentIndex].url);
                 loadImageDetails(images[currentIndex].id);
+                currentImageId = images[currentIndex].id;
             });
 
             $('#toggleCommentForm').click(function () {
@@ -201,12 +208,74 @@
         });
 
         function setEmoticon(emoticonType) {
-            // Set the values of the hidden fields
-            $('#emoticonImageId').val(imageId);
+            if (currentImageId === null) {
+                console.error('No image ID is set');
+                return;
+            }
+
+            $('#emoticonImageId').val(currentImageId);
             $('#emoticonTypeField').val(emoticonType);
 
-            // Submit the form
-            $('#emoticonForm').submit();
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+            let data = {
+                'image_id': currentImageId,
+                'emoticon_type': emoticonType,
+                'user_id': $('input[name="user_id"]').val(),
+            };
+            console.log('Data being sent:', data);
+
+            $.ajax({
+                url: '/posts/image/emoticon/add/',
+                method: 'POST',
+                data: JSON.stringify(data),
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                success: function (response) {
+                    if (response.success) {
+                        loadImageDetails(currentImageId);
+                    } else {
+                        console.error('Error:', response.error);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error:', error);
+                    console.log(xhr);
+                    console.log(status);
+                }
+            });
         }
+
+
+        $(document).ready(function () {
+            $('#submitComment').click(function () {
+                var formData = {
+                    'image_id': $('#commentImageId').val(),
+                    'user_id': $('#commentUserId').val(),
+                    'content': $('#id_content').val(),
+                };
+
+                var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+                $.ajax({
+                    type: 'POST',
+                    url: '{% url "add_comment" %}',
+                    data: JSON.stringify(formData),
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    success: function (data) {
+                        loadImageDetails(currentImageId);
+                    },
+                    error: function (data) {
+                        console.log('Възникна грешка при добавянето на коментар.');
+                        console.log(data);
+                    },
+                });
+            });
+        });
     </script>
 {% endblock %}

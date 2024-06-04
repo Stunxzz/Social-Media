@@ -17,8 +17,13 @@ class CommentCreationForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ['content']
+
         widgets = {
-            'content': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Write a comment ...'}),
+            'content': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 2, 'placeholder': 'Write a comment ...',
+                'user_id': forms.HiddenInput(),
+                'image_id': forms.HiddenInput()
+                }),
         }
         labels = {
             'content': ''
