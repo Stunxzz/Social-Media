@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+<script src="{% static 'js/custom.js' %}"></script>
+
+{% block content %}
+<div class="container">
+  <h1 class="text-center mt-4">Your Friends</h1>
+  <div class="row justify-content-center">
+    {% for friend in friends_queryset %}
+      <div class="col-md-2 mb-4">
+        <div class="card mx-auto">
+          <img src="{{ friend.profilepicture.image.url }}" class="card-img-top" alt="Profile Picture">
+          <div class="card-body text-center">
+            <h5 class="card-title">{{ friend.first_name }} {{ friend.last_name }}</h5>
+            <a href="#" class="btn btn-primary">View</a>
+          </div>
+        </div>
+      </div>
+      {% if forloop.counter|divisibleby:5 %}
+        </div><div class="row justify-content-center">
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

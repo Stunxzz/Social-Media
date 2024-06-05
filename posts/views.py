@@ -6,9 +6,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView, DeleteView
-from Profiles.models import UserProfile
+from Profiles.models import UserProfile, FriendRequest
 from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm, EmoticonForm
 from posts.models import Post, Comment, Album, Emoticon, UserImage
+from django.db.models import Q
 
 
 
@@ -20,7 +21,9 @@ class UserPostListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_profile = UserProfile.objects.get(user=self.request.user)
-        user_profiles = UserProfile.objects.exclude(user=self.request.user)
+        user_profiles = UserProfile.objects.exclude(
+            Q(user=self.request.user) | Q(friends=user_profile)
+        )
         posts = Post.objects.all().order_by('-created_at')
         comments = Comment.objects.filter(post__in=posts).order_by('-created_at')
 
@@ -59,7 +62,7 @@ class UserPostListView(LoginRequiredMixin, ListView):
         return self.get(request, *args, **kwargs)
 
 
-class CreateAlbumView(View):
+class CreateAlbumView(View, LoginRequiredMixin):
     form_class = AlbumForm
     template_name = 'create_album.html'
 
@@ -86,7 +89,7 @@ class CreateAlbumView(View):
         return render(request, self.template_name, {'form': form, 'albums': albums})
 
 
-class UploadImageView(View):
+class UploadImageView(View, LoginRequiredMixin):
     form_class = UserImageForm
     template_name = 'upload_image.html'
 
@@ -104,7 +107,7 @@ class UploadImageView(View):
         return render(request, self.template_name, {'form': form})
 
 
-class AlbumDetailView(View):
+class AlbumDetailView(View, LoginRequiredMixin):
     template_name = 'album_detail.html'
     form_class = UserImageForm
 
@@ -141,7 +144,7 @@ class AlbumDetailView(View):
                       {'album': album, 'images': images, 'form': form})
 
 
-class AddCommentView(View):
+class AddCommentView(View, LoginRequiredMixin):
     try:
         def post(self, request):
             data = json.loads(request.body)
@@ -155,7 +158,7 @@ class AddCommentView(View):
             pass
 
 
-class AddEmoticonView(View):
+class AddEmoticonView(View, LoginRequiredMixin):
     def post(self, request):
         try:
             data = json.loads(request.body)
@@ -196,7 +199,7 @@ class AddEmoticonView(View):
             return JsonResponse({'error': str(e)}, status=500)
 
 
-class AlbumDeleteView(DeleteView):
+class AlbumDeleteView(DeleteView, LoginRequiredMixin):
     model = Album
     success_url = reverse_lazy('create_album')
 
@@ -207,7 +210,7 @@ class AlbumDeleteView(DeleteView):
         return HttpResponseRedirect(self.success_url)
 
 
-class ImageDetailView(View):
+class ImageDetailView(View, LoginRequiredMixin):
     def get(self, request, image_id):
         image = get_object_or_404(UserImage, id=image_id)
         comments = Comment.objects.filter(pictures=image)
@@ -222,3 +225,65 @@ class ImageDetailView(View):
             'emoticon_counts': emoticon_counts,
         }
         return JsonResponse(response_data)
+
+
+class SendFriendRequestView(LoginRequiredMixin, View):
+    def post(self, request, user_id):
+        to_user_profile = get_object_or_404(UserProfile, user__id=user_id)
+        from_user_profile = request.user.userprofile
+        if not FriendRequest.objects.filter(from_user=from_user_profile, to_user=to_user_profile).exists() and not from_user_profile.friends.filter(id=to_user_profile.id).exists():
+            from_user_profile.send_friend_request(to_user_profile)
+        return redirect('profile_dashboard')
+
+
+
+class FriendRequestsView(LoginRequiredMixin, View):
+    def get(self, request):
+        received_friend_requests = FriendRequest.objects.filter(to_user=request.user.userprofile, status='pending')
+        friend_requests_data = [
+            {
+                'id': req.id,
+                'from_user': {
+                    'first_name': req.from_user.first_name,
+                    'last_name': req.from_user.last_name,
+                    'profile_picture': req.from_user.profilepicture.image.url
+                }
+            } for req in received_friend_requests
+        ]
+        return JsonResponse({
+            'friend_requests_count': received_friend_requests.count(),
+            'friend_requests': friend_requests_data
+        })
+
+
+class RejectFriendRequestView(LoginRequiredMixin, View):
+    def post(self, request, request_id):
+        friend_request = get_object_or_404(FriendRequest, id=request_id, to_user=request.user.userprofile)
+        friend_request.reject()
+        return redirect('profile_dashboard')
+
+
+class AcceptFriendRequestView(LoginRequiredMixin, View):
+    def post(self, request, request_id):
+        friend_request = get_object_or_404(FriendRequest, id=request_id, to_user=request.user.userprofile)
+        friend_request.accept()
+        return redirect('profile_dashboard')
+
+
+class FriendsListView(LoginRequiredMixin, ListView):
+    template_name = 'friends_list.html'
+    context_object_name = 'friends'
+
+
+    def get_queryset(self):
+        friends = self.request.user.userprofile.friends.all()
+        for fr in friends:
+            print(fr.profilepicture.image)
+        return self.request.user.userprofile.friends.all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_profile = UserProfile.objects.get(user=self.request.user)
+        context['user_profile'] = user_profile
+        context['friends_queryset'] = self.get_queryset()
+        return context

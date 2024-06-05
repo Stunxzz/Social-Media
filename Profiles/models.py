@@ -48,9 +48,9 @@ class UserProfile(models.Model):
     friends = models.ManyToManyField('self', symmetrical=True, blank=True)
     comments = models.ManyToManyField('posts.Comment', blank=True)
 
-    def send_friend_request(self, to_user):
+    def send_friend_request(self, to_user_profile):
         try:
-            friend_request = FriendRequest.objects.get(from_user=self.user, to_user=to_user)
+            friend_request = FriendRequest.objects.get(from_user=self, to_user=to_user_profile)
             if friend_request.status == 'pending':
                 friend_request.cancel()
                 return 'Friend request cancelled.'
@@ -59,7 +59,7 @@ class UserProfile(models.Model):
                 friend_request.save()
                 return 'Friend request re-sent.'
         except FriendRequest.DoesNotExist:
-            FriendRequest.objects.create(from_user=self.user, to_user=to_user)
+            FriendRequest.objects.create(from_user=self, to_user=to_user_profile)
             return 'Friend request sent.'
 
     def remove_friend(self, friend):
@@ -88,11 +88,12 @@ class FriendRequest(models.Model):
         self.save()
         self.from_user.friends.add(self.to_user)
         self.to_user.friends.add(self.from_user)
+        self.delete()
 
     def reject(self):
         self.status = 'rejected'
-        self.save()
+        self.delete()
 
     def cancel(self):
         self.status = 'cancelled'
-        self.save()
+        self.delete()
