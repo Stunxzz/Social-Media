@@ -1,4 +1,5 @@
 import json
+from pprint import pprint
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
@@ -157,6 +158,17 @@ class AddCommentView(View, LoginRequiredMixin):
     except Exception as e:
             pass
 
+class AddEmotIconComments(View, LoginRequiredMixin):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            comment_id = data.get('comment_id')
+            emoticon_type = data.get('emoticon_type')
+            user_id = data.get('user_id')
+
+
+        except:
+            pass
 
 class AddEmoticonView(View, LoginRequiredMixin):
     def post(self, request):
@@ -215,11 +227,32 @@ class ImageDetailView(View, LoginRequiredMixin):
         image = get_object_or_404(UserImage, id=image_id)
         comments = Comment.objects.filter(pictures=image)
         emoticons = Emoticon.objects.filter(related_user_img=image)
+
         emoticon_counts = {'like': 0, 'heart': 0, 'smile': 0, 'rage': 0}
         for emoticon in emoticons:
             emoticon_counts[emoticon.emoticon_type] += 1
 
-        comments_data = list(comments.values('id', 'content'))
+        comments_data = []
+        for com in comments:
+            comments_emoticons = Emoticon.objects.filter(related_comment=com)
+            comments_emoticon_counts = {'like': 0, 'heart': 0, 'smile': 0, 'rage': 0}
+            for emoticon in comments_emoticons:
+                comments_emoticon_counts[emoticon.emoticon_type] += 1
+
+            comment = {
+                'id': com.id,
+                'user_profile': {
+                    'id': com.user_profile.id,
+                    'first_name': com.user_profile.first_name,
+                    'second_name': com.user_profile.last_name,
+                    'profile_img': com.user_profile.profilepicture.image.url
+                },
+                'content': com.content,
+                'created_at': com.created_at,
+                'emoticon_counts': comments_emoticon_counts,
+            }
+            comments_data.append(comment)
+
         response_data = {
             'comments': comments_data,
             'emoticon_counts': emoticon_counts,

@@ -117,7 +117,7 @@
         </div>
     </div>
 
-    <style>
+   <style>
         .btn-emoticon {
             margin: 0;
             padding: 2px;
@@ -131,9 +131,22 @@
         .btn-emoticon:hover i {
             transform: scale(1.2);
         }
-    </style>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        .comment {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .comment img.profile-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+    </style>
     <script>
         let currentImageId = null;
 
@@ -152,10 +165,24 @@
                 contentType: 'application/json',
                 dataType: 'json',
                 success: function (response) {
-                    // Load comments
                     let commentsHtml = '';
                     response.comments.reverse().forEach(function (comment) {
-                        commentsHtml += '<p>' + comment.content + '</p>';
+                        commentsHtml +=  `<div class="comment">
+                            <img src="${comment.user_profile.profile_img}" alt="Profile Image" class="profile-img">
+                                <div class="d-flex flex-column">
+                                    <strong>${comment.user_profile.first_name} ${comment.user_profile.second_name}:</strong>
+                                    <p>${comment.content}</p>
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <i class="fas fa-thumbs-up" style="color: #3b5998"></i>
+                                            <i class="fas fa-heart" style="color: #dc143c"></i>
+                                            <i class="fas fa-smile" style="color: #ffd700"></i>
+                                            <i class="fas fa-angry" style="color: #ff0000;"></i>
+                                        </div>
+
+                                    </div>
+                                </div>
+                        </div>`
                     });
                     $('#commentList').html(commentsHtml);
 
@@ -223,7 +250,7 @@
                 'emoticon_type': emoticonType,
                 'user_id': $('input[name="user_id"]').val(),
             };
-            console.log('Data being sent:', data);
+
 
             $.ajax({
                 url: '/posts/image/emoticon/add/',
@@ -234,6 +261,7 @@
                     'X-CSRFToken': csrfToken
                 },
                 success: function (response) {
+                    console.log(response)
                     if (response.success) {
                         loadImageDetails(currentImageId);
                     } else {
