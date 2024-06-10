@@ -11,6 +11,7 @@ from Profiles.models import UserProfile, FriendRequest
 from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm, EmoticonForm
 from posts.models import Post, Comment, Album, Emoticon, UserImage
 from django.db.models import Q
+from django.middleware.csrf import get_token
 
 
 
@@ -158,6 +159,7 @@ class AddCommentView(View, LoginRequiredMixin):
     except Exception as e:
             pass
 
+
 class AddEmotIconComments(View, LoginRequiredMixin):
     def post(self, request):
         try:
@@ -165,10 +167,23 @@ class AddEmotIconComments(View, LoginRequiredMixin):
             comment_id = data.get('comment_id')
             emoticon_type = data.get('emoticon_type')
             user_id = data.get('user_id')
+            existing_emoticon = Emoticon.objects.filter(related_comment_id=comment_id, related_user_id=user_id).first()
 
+            if existing_emoticon:
+                if existing_emoticon.emoticon_type == emoticon_type:
+                    existing_emoticon.delete()
+                else:
+                    existing_emoticon.emoticon_type = emoticon_type
+                    existing_emoticon.save()
+            else:
+                Emoticon.objects.create(emoticon_type=emoticon_type, related_user_id=user_id,
+                                        related_comment_id=comment_id)
 
-        except:
-            pass
+            return JsonResponse({'success': True})
+        except Exception as e:
+            print(f'Error: {e}')
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 
 class AddEmoticonView(View, LoginRequiredMixin):
     def post(self, request):
@@ -250,6 +265,7 @@ class ImageDetailView(View, LoginRequiredMixin):
                 'content': com.content,
                 'created_at': com.created_at,
                 'emoticon_counts': comments_emoticon_counts,
+                'total_emoticon_count': sum(comments_emoticon_counts.values())
             }
             comments_data.append(comment)
 

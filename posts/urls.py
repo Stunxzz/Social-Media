@@ -4,7 +4,7 @@ from django.urls import path
 
 from posts.views import UserPostListView, CreateAlbumView, UploadImageView, AlbumDetailView, AlbumDeleteView, \
     AddCommentView, AddEmoticonView, ImageDetailView, SendFriendRequestView, FriendRequestsView, \
-    AcceptFriendRequestView, RejectFriendRequestView, FriendsListView
+    AcceptFriendRequestView, RejectFriendRequestView, FriendsListView, AddEmotIconComments
 
 urlpatterns = ([
                    path('', UserPostListView.as_view(), name='profile_dashboard'),
@@ -14,6 +14,7 @@ urlpatterns = ([
                    path('album/<int:pk>/delete/', AlbumDeleteView.as_view(), name='album_delete'),
                    path('image/comment/add/', AddCommentView.as_view(), name='add_comment'),
                    path('image/emoticon/add/', AddEmoticonView.as_view(), name='add_emoticon'),
+                   path('comment/emoticon/add/', AddEmotIconComments.as_view(), name='add_comment_emoticon'),
                    path('image/<int:image_id>/', ImageDetailView.as_view(), name='image_detail'),
                    path('send-friend-request/<int:user_id>/', SendFriendRequestView.as_view(),
                         name='send_friend_request'),

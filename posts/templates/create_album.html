@@ -1,6 +1,5 @@
 {% extends 'dashboard.html' %}
 {% load static %}
-
 {% block content %}
     <div class="container mt-5">
         <div class="row justify-content-center">
@@ -132,6 +131,7 @@
             margin-right: 0;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
         $('#confirmDeleteModal').on('show.bs.modal', function (event) {
             const button = $(event.relatedTarget); // Button that triggered the modal

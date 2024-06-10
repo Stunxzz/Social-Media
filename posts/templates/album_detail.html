@@ -72,7 +72,7 @@
                                 <input type="hidden" name="image_id" id="emoticonImageId">
                                 <input type="hidden" name="emoticon_type" id="emoticonTypeField">
                                 <input type="hidden" name="user_id" value="{{ user_profile.id }}">
-                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+{#                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">#}
                                 <div class="btn-group" role="group" aria-label="Emoticons">
                                     <button type="button" class="btn btn-link btn-emoticon"
                                             onclick="setEmoticon('like')">
@@ -116,8 +116,26 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="reactionsModal" tabindex="-1" aria-labelledby="reactionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reactionsModalLabel">Reactions</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="reactionsModalBody">
+                    <!-- Reactions will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-   <style>
+    <style>
         .btn-emoticon {
             margin: 0;
             padding: 2px;
@@ -140,7 +158,7 @@
             overflow: hidden;
         }
 
-        .comment img.profile-img {
+        .profile-img {
             width: 50px;
             height: 50px;
             border-radius: 50%;
@@ -165,24 +183,48 @@
                 contentType: 'application/json',
                 dataType: 'json',
                 success: function (response) {
+                    let dataEmoticon = {
+                        'like': '<i class="fas fa-thumbs-up" style="color: #3b5998"></i>',
+                        'heart': '<i class="fas fa-heart" style="color: #dc143c"></i>',
+                        'smile': '<i class="fas fa-smile" style="color: #ffd700"></i>',
+                        'rage': '<i class="fas fa-angry" style="color: #ff0000;"></i>'
+                    };
+
                     let commentsHtml = '';
                     response.comments.reverse().forEach(function (comment) {
-                        commentsHtml +=  `<div class="comment">
-                            <img src="${comment.user_profile.profile_img}" alt="Profile Image" class="profile-img">
-                                <div class="d-flex flex-column">
-                                    <strong>${comment.user_profile.first_name} ${comment.user_profile.second_name}:</strong>
-                                    <p>${comment.content}</p>
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <i class="fas fa-thumbs-up" style="color: #3b5998"></i>
-                                            <i class="fas fa-heart" style="color: #dc143c"></i>
-                                            <i class="fas fa-smile" style="color: #ffd700"></i>
-                                            <i class="fas fa-angry" style="color: #ff0000;"></i>
-                                        </div>
-
-                                    </div>
-                                </div>
-                        </div>`
+                        let reactionsData = {
+                            emoticon_counts: comment.emoticon_counts,
+                            user_profile: comment.user_profile,
+                            commentEmoticon: dataEmoticon
+                        };
+                        let formattedDate = new Date(comment.created_at).toISOString().split('T')[0];
+                        commentsHtml += `<div class="comment">
+                    <img src="${comment.user_profile.profile_img}" alt="Profile Image" class="profile-img">
+                    <div class="d-flex flex-column">
+                        <strong>${comment.user_profile.first_name} ${comment.user_profile.second_name}:</strong>
+                        <p>${comment.content}</p>
+                        <div class="d-flex justify-content-center">
+                            <div>
+                                <button type="button" class="btn btn-link btn-emoticon" data-comment-id="${comment.id}" data-emoticon-type="like">
+    <i class="fas fa-thumbs-up" style="color: #3b5998"></i>
+</button>
+<button type="button" class="btn btn-link btn-emoticon" data-comment-id="${comment.id}" data-emoticon-type="heart">
+    <i class="fas fa-heart" style="color: #dc143c"></i>
+</button>
+<button type="button" class="btn btn-link btn-emoticon" data-comment-id="${comment.id}" data-emoticon-type="smile">
+    <i class="fas fa-smile" style="color: #ffd700"></i>
+</button>
+<button type="button" class="btn btn-link btn-emoticon" data-comment-id="${comment.id}" data-emoticon-type="rage">
+    <i class="fas fa-angry" style="color: #ff0000;"></i>
+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ds-cursor" style="cursor: pointer" data-reactions='${JSON.stringify(reactionsData)}'>
+                        ${comment.total_emoticon_count} people liked this
+                    </p>
+                    <p class="text-muted small mb-0">${formattedDate}</p>
+                </div>`;
                     });
                     $('#commentList').html(commentsHtml);
 
@@ -194,12 +236,26 @@
                 },
                 error: function (xhr, status, error) {
                     console.error('Error loading image details:', error);
-                    console.log(xhr);
-                    console.log(status);
-                    console.log(error);
                 }
             });
         }
+
+        $(document).on('click', '.ds-cursor', function () {
+            const reactions = $(this).data('reactions');
+            let reactionsHtml = '';
+
+            for (const [emoticon, count] of Object.entries(reactions.emoticon_counts)) {
+                if (count > 0) {
+                    reactionsHtml += `<div class="reaction">
+                <img src="${reactions.user_profile.profile_img}" alt="Profile Image" class="profile-img">
+                <strong>${reactions.user_profile.first_name} ${reactions.user_profile.second_name}</strong> reacted with ${reactions.commentEmoticon[emoticon]}
+            </div>`;
+                }
+            }
+
+            $('#reactionsModalBody').html(reactionsHtml);
+            $('#reactionsModal').modal('show');
+        });
 
         $(document).ready(function () {
             const images = [];
@@ -232,6 +288,32 @@
             $('#toggleCommentForm').click(function () {
                 $('#commentForm').toggle();
             });
+
+            $('#submitComment').click(function () {
+                let formData = {
+                    'image_id': $('#commentImageId').val(),
+                    'user_id': $('#commentUserId').val(),
+                    'content': $('#id_content').val(),
+                };
+
+                let csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+                $.ajax({
+                    type: 'POST',
+                    url: '{% url "add_comment" %}',
+                    data: JSON.stringify(formData),
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    success: function (data) {
+                        loadImageDetails(currentImageId);
+                    },
+                    error: function (data) {
+                        console.log('Error adding comment.');
+                    },
+                });
+            });
         });
 
         function setEmoticon(emoticonType) {
@@ -251,17 +333,16 @@
                 'user_id': $('input[name="user_id"]').val(),
             };
 
-
             $.ajax({
                 url: '/posts/image/emoticon/add/',
                 method: 'POST',
                 data: JSON.stringify(data),
-                contentType: 'application/json',
+
                 headers: {
+                    "X-Requested-With": "XMLHttpRequest",
                     'X-CSRFToken': csrfToken
                 },
                 success: function (response) {
-                    console.log(response)
                     if (response.success) {
                         loadImageDetails(currentImageId);
                     } else {
@@ -270,40 +351,64 @@
                 },
                 error: function (xhr, status, error) {
                     console.error('Error:', error);
-                    console.log(xhr);
-                    console.log(status);
                 }
             });
         }
 
+        $(document).on('click', '.btn-emoticon', function () {
+            const commentId = $(this).data('comment-id');
+            const emoticonType = $(this).data('emoticon-type');
+            const userId = $('input[name="user_id"]').val();
 
-        $(document).ready(function () {
-            $('#submitComment').click(function () {
-                var formData = {
-                    'image_id': $('#commentImageId').val(),
-                    'user_id': $('#commentUserId').val(),
-                    'content': $('#id_content').val(),
-                };
+            if (!commentId || !emoticonType || !userId) {
+                return;
+            }
 
-                var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
 
-                $.ajax({
-                    type: 'POST',
-                    url: '{% url "add_comment" %}',
-                    data: JSON.stringify(formData),
-                    contentType: 'application/json',
-                    headers: {
-                        'X-CSRFToken': csrfToken
-                    },
-                    success: function (data) {
+            let data = {
+                'comment_id': commentId,
+                'emoticon_type': emoticonType,
+                'user_id': userId,
+            };
+            console.log(data)
+
+            $.ajax({
+                url: '/posts/comment/emoticon/add/',
+                method: 'POST',
+                data: JSON.stringify(data),
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                success: function (response) {
+                    if (response.success) {
+                        console.log(csrfToken)
                         loadImageDetails(currentImageId);
-                    },
-                    error: function (data) {
-                        console.log('Възникна грешка при добавянето на коментар.');
-                        console.log(data);
-                    },
-                });
+                    } else {
+                        console.error('Error:', response.error);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error:', error);
+                }
             });
         });
+        function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      // Does this cookie string begin with the name we want?
+      if (cookie.substring(0, name.length + 1) === (name + "=")) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
     </script>
+
 {% endblock %}
