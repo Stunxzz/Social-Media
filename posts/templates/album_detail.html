@@ -17,7 +17,7 @@
                                 <img class="card-img-top" src="{{ image.image.url }}" alt="{{ image.image }}"
                                      onclick="showImageDetailModal('{{ image.image.url }}', {{ image.id }})">
                             </div>
-                        </div> <!-- Добавихме затварящия div тук -->
+                        </div>
                     {% endfor %}
                 </div> <!-- Затваряме реда тук -->
             </div>
@@ -72,7 +72,7 @@
                                 <input type="hidden" name="image_id" id="emoticonImageId">
                                 <input type="hidden" name="emoticon_type" id="emoticonTypeField">
                                 <input type="hidden" name="user_id" value="{{ user_profile.id }}">
-{#                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">#}
+
                                 <div class="btn-group" role="group" aria-label="Emoticons">
                                     <button type="button" class="btn btn-link btn-emoticon"
                                             onclick="setEmoticon('like')">
@@ -296,15 +296,13 @@
                     'content': $('#id_content').val(),
                 };
 
-                let csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-
                 $.ajax({
                     type: 'POST',
                     url: '{% url "add_comment" %}',
                     data: JSON.stringify(formData),
                     contentType: 'application/json',
                     headers: {
-                        'X-CSRFToken': csrfToken
+                        'X-CSRFToken': '{{ csrf_token }}'
                     },
                     success: function (data) {
                         loadImageDetails(currentImageId);
@@ -325,7 +323,6 @@
             $('#emoticonImageId').val(currentImageId);
             $('#emoticonTypeField').val(emoticonType);
 
-            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
 
             let data = {
                 'image_id': currentImageId,
@@ -340,7 +337,7 @@
 
                 headers: {
                     "X-Requested-With": "XMLHttpRequest",
-                    'X-CSRFToken': csrfToken
+                    'X-CSRFToken': '{{ csrf_token }}'
                 },
                 success: function (response) {
                     if (response.success) {
@@ -364,14 +361,12 @@
                 return;
             }
 
-            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-
             let data = {
                 'comment_id': commentId,
                 'emoticon_type': emoticonType,
                 'user_id': userId,
             };
-            console.log(data)
+
 
             $.ajax({
                 url: '/posts/comment/emoticon/add/',
@@ -379,11 +374,11 @@
                 data: JSON.stringify(data),
                 contentType: 'application/json',
                 headers: {
-                    'X-CSRFToken': csrfToken
+                    'X-CSRFToken': '{{ csrf_token }}'
                 },
                 success: function (response) {
                     if (response.success) {
-                        console.log(csrfToken)
+
                         loadImageDetails(currentImageId);
                     } else {
                         console.error('Error:', response.error);

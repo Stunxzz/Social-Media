@@ -31,10 +31,9 @@ class CreateProfileView(CreateView):
 class CustomLoginView(LoginView):
     template_name = 'login.html'
     authentication_form = EmailAuthenticationForm
-    print('test')
 
     def form_valid(self, form):
-        print(form)
+
         self.user = form.get_user()
         login(self.request, self.user)
         if hasattr(self.user, 'userprofile'):
@@ -44,8 +43,8 @@ class CustomLoginView(LoginView):
 
     def form_invalid(self, form):
         print('Form is invalid')
-        print(self.request)# Debugging statement
-        print(form.errors)  # Print form errors for debugging
+        print(self.request)
+        print(form.errors)
         return super().form_invalid(form)
 
 class UserProfileCreateView(LoginRequiredMixin, CreateView):

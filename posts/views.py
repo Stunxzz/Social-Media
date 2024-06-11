@@ -1,5 +1,4 @@
 import json
-from pprint import pprint
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
@@ -11,7 +10,7 @@ from Profiles.models import UserProfile, FriendRequest
 from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm, EmoticonForm
 from posts.models import Post, Comment, Album, Emoticon, UserImage
 from django.db.models import Q
-from django.middleware.csrf import get_token
+
 
 
 
@@ -23,15 +22,30 @@ class UserPostListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_profile = UserProfile.objects.get(user=self.request.user)
-        user_profiles = UserProfile.objects.exclude(
-            Q(user=self.request.user) | Q(friends=user_profile)
-        )
-        posts = Post.objects.all().order_by('-created_at')
-        comments = Comment.objects.filter(post__in=posts).order_by('-created_at')
+
+        friends = user_profile.friends.all()
+        posts = Post.objects.filter(
+            Q(user_profile__in=friends) | Q(user_profile=user_profile)
+        ).order_by('-created_at')
+
+        user_images = UserImage.objects.filter(
+            Q(user_profile__in=friends) | Q(user_profile=user_profile)
+        ).order_by('-uploaded_at')
+        user_images_comments = Comment.objects.filter(pictures__in=user_images).order_by('-created_at')
+
+        post_comments = Comment.objects.filter(post__in=posts).order_by('-created_at')
+        post_emoticons = Emoticon.objects.filter(post__in=posts)
+        user_images_comments_emoticon = Emoticon.objects.filter(Q(related_comment__in=post_comments) | Q(related_comment__in=user_images_comments))
+        comment_emoticons = Emoticon.objects.filter(related_comment__in=post_comments)
 
         context['posts'] = posts
-        context['comments'] = comments
-        context['user_profiles'] = user_profiles
+        context['user_images'] = user_images
+        context['post_comments'] = post_comments
+        context['user_images_comments'] = user_images_comments
+        context['user_images_comments_emoticon'] = user_images_comments_emoticon
+        context['post_emoticons'] = post_emoticons
+        context['comment_emoticons'] = comment_emoticons
+        context['user_profiles'] = UserProfile.objects.exclude(Q(user=self.request.user) | Q(friends=user_profile))
         context['user_profile'] = user_profile
         context['post_form'] = PostCreationForm()
         context['comment_form'] = CommentCreationForm()
@@ -42,7 +56,6 @@ class UserPostListView(LoginRequiredMixin, ListView):
         comment_form = CommentCreationForm(request.POST)
         form_type = request.POST.get('form_type')
         if form_type == 'post_form' and post_form.is_valid():
-            print('POST')
             new_post = post_form.save(commit=False)
             new_post.user = request.user
             new_post.user_profile = UserProfile.objects.get(user=request.user)
@@ -60,6 +73,17 @@ class UserPostListView(LoginRequiredMixin, ListView):
                 new_comment.save()
 
                 return redirect('profile_dashboard')
+
+        elif form_type == 'comment_image_form':
+            if comment_form.is_valid():
+                new_comment = comment_form.save(commit=False)
+                new_comment.user = request.user
+                new_comment.user_profile = UserProfile.objects.get(user=request.user)
+                image_id = request.POST.get('picture_id')
+                image = UserImage.objects.get(id=image_id)
+                new_comment.pictures = image
+                new_comment.save()
+
 
         return self.get(request, *args, **kwargs)
 
@@ -244,6 +268,9 @@ class ImageDetailView(View, LoginRequiredMixin):
         emoticons = Emoticon.objects.filter(related_user_img=image)
 
         emoticon_counts = {'like': 0, 'heart': 0, 'smile': 0, 'rage': 0}
+        # total_counts = emoticon_counts.values()
+        # emoticon_counts['total'] = total_counts
+
         for emoticon in emoticons:
             emoticon_counts[emoticon.emoticon_type] += 1
 
@@ -325,9 +352,6 @@ class FriendsListView(LoginRequiredMixin, ListView):
 
 
     def get_queryset(self):
-        friends = self.request.user.userprofile.friends.all()
-        for fr in friends:
-            print(fr.profilepicture.image)
         return self.request.user.userprofile.friends.all()
 
     def get_context_data(self, **kwargs):
