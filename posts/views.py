@@ -1,4 +1,5 @@
 import json
+from pprint import pprint
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
@@ -31,6 +32,7 @@ class UserPostListView(LoginRequiredMixin, ListView):
         user_images = UserImage.objects.filter(
             Q(user_profile__in=friends) | Q(user_profile=user_profile)
         ).order_by('-uploaded_at')
+        user_images_emoticon = Emoticon.objects.filter(related_user_img__in=user_images.values_list('id', flat=True))
         user_images_comments = Comment.objects.filter(pictures__in=user_images).order_by('-created_at')
 
         post_comments = Comment.objects.filter(post__in=posts).order_by('-created_at')
@@ -41,6 +43,7 @@ class UserPostListView(LoginRequiredMixin, ListView):
         context['posts'] = posts
         context['user_images'] = user_images
         context['post_comments'] = post_comments
+        context['user_images_emoticon'] = user_images_emoticon
         context['user_images_comments'] = user_images_comments
         context['user_images_comments_emoticon'] = user_images_comments_emoticon
         context['post_emoticons'] = post_emoticons
@@ -360,3 +363,15 @@ class FriendsListView(LoginRequiredMixin, ListView):
         context['user_profile'] = user_profile
         context['friends_queryset'] = self.get_queryset()
         return context
+
+class GetReactionsView(View):
+    def get(self, request, *args, **kwargs):
+        image_id = request.GET.get('image_id')
+        reactions = Emoticon.objects.filter(related_user_img_id=image_id).select_related('related_user')
+
+        reactions_data = [{'user_first_name': reaction.related_user.first_name, 'type': reaction.emoticon_type,
+                           'user_second_name': reaction.related_user.last_name,
+                           'user_profile_img': reaction.related_user.profilepicture.image.url
+                           } for reaction in reactions]
+
+        return JsonResponse({'success': True, 'reactions': reactions_data})
