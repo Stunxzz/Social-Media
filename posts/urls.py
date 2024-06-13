@@ -4,7 +4,8 @@ from django.urls import path
 
 from posts.views import UserPostListView, CreateAlbumView, UploadImageView, AlbumDetailView, AlbumDeleteView, \
     AddCommentView, AddEmoticonView, ImageDetailView, SendFriendRequestView, FriendRequestsView, \
-    AcceptFriendRequestView, RejectFriendRequestView, FriendsListView, AddEmotIconComments, GetReactionsView
+    AcceptFriendRequestView, RejectFriendRequestView, FriendsListView, AddEmotIconComments, GetReactionsView, \
+    GetCommentReactionsView, GetPostReactionCountView, AddPostEmoticonView
 
 urlpatterns = ([
                    path('', UserPostListView.as_view(), name='profile_dashboard'),
@@ -18,6 +19,7 @@ urlpatterns = ([
                    path('image/<int:image_id>/', ImageDetailView.as_view(), name='image_detail'),
                    path('send-friend-request/<int:user_id>/', SendFriendRequestView.as_view(),
                         name='send_friend_request'),
+                   path('get_comment_reactions/', GetCommentReactionsView.as_view(), name='get_comment_reactions'),
                    path('friend_requests/', FriendRequestsView.as_view(), name='friend_requests'),
                    path('accept_friend_request/<int:request_id>/', AcceptFriendRequestView.as_view(),
                         name='accept_friend_request'),
@@ -25,6 +27,8 @@ urlpatterns = ([
                         name='reject_friend_request'),
                    path('friends/', FriendsListView.as_view(), name='friends_list'),
                    path('get_reactions/', GetReactionsView.as_view(), name='get_reactions'),
+                   path('get_post_reaction_count/', GetPostReactionCountView.as_view(), name='get_post_reaction_count'),
+                   path('add_post_emoticon/', AddPostEmoticonView.as_view(), name='add_post_emoticon'),
 
                ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
                + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT))

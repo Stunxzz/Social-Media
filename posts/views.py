@@ -13,8 +13,6 @@ from posts.models import Post, Comment, Album, Emoticon, UserImage
 from django.db.models import Q
 
 
-
-
 class UserPostListView(LoginRequiredMixin, ListView):
     model = Post
     template_name = 'dashboard.html'
@@ -37,7 +35,8 @@ class UserPostListView(LoginRequiredMixin, ListView):
 
         post_comments = Comment.objects.filter(post__in=posts).order_by('-created_at')
         post_emoticons = Emoticon.objects.filter(post__in=posts)
-        user_images_comments_emoticon = Emoticon.objects.filter(Q(related_comment__in=post_comments) | Q(related_comment__in=user_images_comments))
+        user_images_comments_emoticon = Emoticon.objects.filter(
+            Q(related_comment__in=post_comments) | Q(related_comment__in=user_images_comments))
         comment_emoticons = Emoticon.objects.filter(related_comment__in=post_comments)
 
         context['posts'] = posts
@@ -86,7 +85,6 @@ class UserPostListView(LoginRequiredMixin, ListView):
                 image = UserImage.objects.get(id=image_id)
                 new_comment.pictures = image
                 new_comment.save()
-
 
         return self.get(request, *args, **kwargs)
 
@@ -184,7 +182,30 @@ class AddCommentView(View, LoginRequiredMixin):
             return JsonResponse({'success': True})
 
     except Exception as e:
-            pass
+        pass
+
+
+class GetCommentReactionsView(View):
+    def get(self, request):
+        comment_id = request.GET.get('comment_id')
+        reactions = Emoticon.objects.filter(related_comment_id=comment_id).select_related('related_user')
+
+        reactions_data = [{
+            'user_first_name': reaction.related_user.first_name,
+            'user_second_name': reaction.related_user.last_name,
+            'user_profile_img': reaction.related_user.profilepicture.image.url if reaction.related_user.profilepicture else '',
+            'type': reaction.emoticon_type
+        } for reaction in reactions]
+
+        return JsonResponse({'success': True, 'reactions': reactions_data})
+
+
+class GetPostReactionCountView(View):
+    def get(self, request, *args, **kwargs):
+        post_id = request.GET.get('post_id')
+        post = get_object_or_404(Post, id=post_id)
+        reaction_count = Emoticon.objects.filter(post=post).count()
+        return JsonResponse({'success': True, 'reaction_count': reaction_count})
 
 
 class AddEmotIconComments(View, LoginRequiredMixin):
@@ -310,10 +331,11 @@ class SendFriendRequestView(LoginRequiredMixin, View):
     def post(self, request, user_id):
         to_user_profile = get_object_or_404(UserProfile, user__id=user_id)
         from_user_profile = request.user.userprofile
-        if not FriendRequest.objects.filter(from_user=from_user_profile, to_user=to_user_profile).exists() and not from_user_profile.friends.filter(id=to_user_profile.id).exists():
+        if not FriendRequest.objects.filter(from_user=from_user_profile,
+                                            to_user=to_user_profile).exists() and not from_user_profile.friends.filter(
+                id=to_user_profile.id).exists():
             from_user_profile.send_friend_request(to_user_profile)
         return redirect('profile_dashboard')
-
 
 
 class FriendRequestsView(LoginRequiredMixin, View):
@@ -353,7 +375,6 @@ class FriendsListView(LoginRequiredMixin, ListView):
     template_name = 'friends_list.html'
     context_object_name = 'friends'
 
-
     def get_queryset(self):
         return self.request.user.userprofile.friends.all()
 
@@ -363,6 +384,7 @@ class FriendsListView(LoginRequiredMixin, ListView):
         context['user_profile'] = user_profile
         context['friends_queryset'] = self.get_queryset()
         return context
+
 
 class GetReactionsView(View):
     def get(self, request, *args, **kwargs):
@@ -375,3 +397,35 @@ class GetReactionsView(View):
                            } for reaction in reactions]
 
         return JsonResponse({'success': True, 'reactions': reactions_data})
+
+
+class AddPostEmoticonView(View):
+    def get(self, request, *args, **kwargs):
+        post_id = request.GET.get('post_id')
+        reactions = Emoticon.objects.filter(post_id=post_id).select_related('related_user')
+
+
+        reactions_data = [{'user_first_name': reaction.related_user.first_name, 'type': reaction.emoticon_type,
+                           'user_second_name': reaction.related_user.last_name,
+                           'user_profile_img': reaction.related_user.profilepicture.image.url
+                           } for reaction in reactions]
+
+        return JsonResponse({'success': True, 'reactions': reactions_data})
+
+    def post(self, request, *args, **kwargs):
+        post_id = request.POST.get('post_id')
+        emoticon_type = request.POST.get('emoticon_type')
+        user_id = request.POST.get('user_id')
+        existing_emoticon = Emoticon.objects.filter(post_id=post_id, related_user_id=user_id).first()
+
+        if existing_emoticon:
+            if existing_emoticon.emoticon_type == emoticon_type:
+                existing_emoticon.delete()
+            else:
+                existing_emoticon.emoticon_type = emoticon_type
+                existing_emoticon.save()
+        else:
+            Emoticon.objects.create(emoticon_type=emoticon_type, related_user_id=user_id,
+                                    post_id=post_id)
+
+        return JsonResponse({'success': True})

@@ -1,7 +1,36 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
+ <style>
+        .btn-emoticon,
+        .btn-emoticon-comment {
+            margin: 0;
+            padding: 1px;
+        }
 
+        .btn-emoticon-comment i{
+        font-size: 1rem;
+            transition: transform 0.3s;
+        }
+        .btn-emoticon i {
+            font-size: 2rem;
+            transition: transform 0.3s;
+        }
+
+        .btn-emoticon:hover i,
+        .btn-emoticon-comment:hover i {
+            transform: scale(1.2);
+        }
+
+
+
+        .profile-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        </style>
 
     <div class="col py-3 main-content" id="main-content">
         <div class="row justify-content-center">
@@ -37,150 +66,176 @@
 
         <div class="posts mt-4">
             {% for post in posts %}
-                <div class="card mt-4 mx-auto" style="width: 60%;">
-                    <div class="card-body post_card">
-                        <div class="d-flex align-items-center">
-                            <img src="{{ post.user_profile.profilepicture.image.url }}" class="rounded-circle me-2"
-                                 style="width: 40px; height: 40px;" alt="{{ post.user_profile.username }}">
-                            <h5 class="card-title">{{ post.user_profile.first_name }} {{ post.user_profile.last_name }}</h5>
-                        </div>
-                        <p class="card-text" style="margin: 5px">{{ post.content }}</p>
-                        <small class="text-muted" style="margin: 5px">{{ post.created_at }}</small>
-                        <div class="mt-3">
-                            <i class="fas fa-thumbs-up" style="color: #3b5998"></i>
-                            <i class="fas fa-heart" style="color: #dc143c"></i>
-                            <i class="fas fa-smile" style="color: #ffd700"></i>
-                            <i class="fas fa-angry" style="color: #ff0000;"></i>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleComments(this)">
-                                Comment
-                            </button>
-                        </div>
-                        <div class="comments mt-3 align-items-center" style="display: none;">
-                            {% for comment in post_comments %}
-                                {% if comment.post == post %}
-                                    <div class="card mt-2 comment_card mx-auto" style="width: 80%">
-                                        <div class="card-body d-flex align-items-center">
-                                            <img src="{{ comment.user_profile.profilepicture.image.url }}"
-                                                 class="rounded-circle me-2"
-                                                 style="width: 40px; height: 40px; margin: 5px"
-                                                 alt="{{ comment.user_profile.username }}">
-                                            <div>
-                                                <strong>{{ comment.user_profile.first_name }} {{ comment.user_profile.last_name }}</strong>
-                                                <p style="margin: 5px">{{ comment.content }}</p>
-                                                <i class="fas fa-thumbs-up" style="color: #3b5998"></i>
-                                                <i class="fas fa-heart" style="color: #dc143c"></i>
-                                                <i class="fas fa-smile" style="color: #ffd700"></i>
+    <div class="card mt-4 mx-auto" style="width: 60%;">
+        <div class="card-body post_card">
+            <div class="d-flex align-items-center">
+                <img src="{{ post.user_profile.profilepicture.image.url }}" class="rounded-circle me-2"
+                     style="width: 40px; height: 40px;" alt="{{ post.user_profile.username }}">
+                <h5 class="card-title">{{ post.user_profile.first_name }} {{ post.user_profile.last_name }}</h5>
+            </div>
+            <p class="card-text" style="margin: 5px">{{ post.content }}</p>
+            <small class="text-muted" style="margin: 5px">{{ post.created_at }}</small>
+            <div class="mt-3">
+                <form id="reaction-form-{{ post.id }}" class="reaction-form d-flex align-items-center">
+                    <input type="hidden" name="user_id" value="{{ user_profile.id }}">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-link p-0 me-2 btn-emoticon" onclick="submitPostReaction('{{ post.id }}', 'like')">
+                        <i class="fas fa-thumbs-up" style="color: #3b5998;"></i>
+                    </button>
+                    <button type="button" class="btn btn-link p-0 me-2 btn-emoticon" onclick="submitPostReaction('{{ post.id }}', 'heart')">
+                        <i class="fas fa-heart" style="color: #dc143c;"></i>
+                    </button>
+                    <button type="button" class="btn btn-link p-0 me-2 btn-emoticon" onclick="submitPostReaction('{{ post.id }}', 'smile')">
+                        <i class="fas fa-smile" style="color: #ffd700;"></i>
+                    </button>
+                    <button type="button" class="btn btn-link p-0 me-2 btn-emoticon" onclick="submitPostReaction('{{ post.id }}', 'rage')">
+                        <i class="fas fa-angry" style="color: #ff0000;"></i>
+                    </button>
+                </form>
+                <p class="post-reaction-count mt-2" style="cursor: pointer; margin: 0;" data-post-id="{{ post.id }}">
+                    Loading reactions...
+                </p>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleComments(this)">
+                    Comment
+                </button>
+            </div>
+            <div class="comments mt-3 align-items-center" style="display: none;">
+                {% for comment in post_comments %}
+                    {% if comment.post == post %}
+                        <div class="card mt-2 comment_card mx-auto" style="width: 80%">
+                            <div class="card-body d-flex align-items-center">
+
+                                <div>
+                                <img src="{{ comment.user_profile.profilepicture.image.url }}"
+                                     class="rounded-circle me-2"
+                                     style="width: 40px; height: 40px; margin: 5px"
+                                     alt="{{ comment.user_profile.username }}">
+                                    <strong>{{ comment.user_profile.first_name }} {{ comment.user_profile.last_name }}</strong>
+                                    <p style="margin: 5px">{{ comment.content }}</p>
+                                    <div class="reaction-form-container mt-2">
+                                        <form id="reaction-form-{{ comment.id }}" class="reaction-form d-flex align-items-center">
+                                            <input type="hidden" name="user_id" value="{{ user_profile.id }}">
+                                            {% csrf_token %}
+                                            <button type="button" class="btn btn-link p-0 me-2 btn-emoticon-comment" onclick="submitCommentReaction('{{ comment.id }}', 'like')">
+                                                <i class="fas fa-thumbs-up" style="color: #3b5998;"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-link p-0 me-2 btn-emoticon-comment" onclick="submitCommentReaction('{{ comment.id }}', 'heart')">
+                                                <i class="fas fa-heart" style="color: #dc143c;"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-link p-0 me-2 btn-emoticon-comment" onclick="submitCommentReaction('{{ comment.id }}', 'smile')">
+                                                <i class="fas fa-smile" style="color: #ffd700;"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-link p-0 me-2 btn-emoticon-comment" onclick="submitCommentReaction('{{ comment.id }}', 'rage')">
                                                 <i class="fas fa-angry" style="color: #ff0000;"></i>
-                                            </div>
-                                        </div>
+                                            </button>
+                                        </form>
+                                        <p class="comment-reaction-count mt-2" style="cursor: pointer; margin: 0;" data-comment-id="{{ comment.id }}">
+                                            Loading reactions...
+                                        </p>
                                     </div>
-                                {% endif %}
-                            {% endfor %}
-                            <form method="post" action="{% url 'profile_dashboard' %}" id="comment-form"
-                                  class="mx-auto" style="width: 80%">
-                                {% csrf_token %}
-                                <input type="hidden" name="post_id" value="{{ post.id }}">
-                                <input type="hidden" name="form_type" value="comment_form">
-                                {{ comment_form.as_p }}
-                                <button type="submit" class="btn btn-primary btn-sm">Comment</button>
-                            </form>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            {% endfor %}
+                    {% endif %}
+                {% endfor %}
+                <form method="post" action="{% url 'profile_dashboard' %}" id="comment-form" class="mx-auto" style="width: 80%">
+                    {% csrf_token %}
+                    <input type="hidden" name="post_id" value="{{ post.id }}">
+                    <input type="hidden" name="form_type" value="comment_post_form">
+                    {{ comment_form.as_p }}
+                    <button type="submit" class="btn btn-primary btn-sm">Comment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
         </div>
 
         <div class="user-images mt-4">
 
             {% for image in user_images %}
-                <div class="card mt-4 mx-auto" style="width: 60%;">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <img src="{{ image.user_profile.profilepicture.image.url }}" class="rounded-circle me-2"
-                                 style="width: 40px; height: 40px;" alt="{{ image.user_profile.username }}">
-                            <h5 class="card-title">{{ image.user_profile.first_name }} {{ image.user_profile.last_name }}</h5>
-                        </div>
-                        <img src="{{ image.image.url }}" class="card-img-top" alt="{{ image.description }}">
-                        <small class="text-muted" style="margin: 5px">{{ image.uploaded_at }}</small>
-                        <div class="mt-3">
-                            <form id="reaction-form-{{ image.id }}" class="reaction-image-form">
-                                <input type="hidden" name="user_id" value="{{ user_profile.id }}">
-                                <p class="reaction-count" data-image-id="{{ image.id }}">
-                                    {{reaction_count}} people like this
-                                </p>
-                                {% csrf_token %}
-                                <button type="button" class="btn btn-link p-0"
-                                        onclick="submitReaction('{{ image.id }}', 'like')">
-
-                                    <i class="fas fa-thumbs-up" style="color: #3b5998"></i>
-                                </button>
-                                <button type="button" class="btn btn-link p-0"
-                                        onclick="submitReaction('{{ image.id }}', 'heart')">
-                                    <i class="fas fa-heart" style="color: #dc143c"></i>
-                                </button>
-                                <button type="button" class="btn btn-link p-0"
-                                        onclick="submitReaction('{{ image.id }}', 'smile')">
-                                    <i class="fas fa-smile" style="color: #ffd700"></i>
-                                </button>
-                                <button type="button" class="btn btn-link p-0"
-                                        onclick="submitReaction('{{ image.id }}', 'rage')">
-                                    <i class="fas fa-angry" style="color: #ff0000;"></i>
-                                </button>
-                            </form>
-
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleComments(this)">
-                                Comment
-                            </button>
-                        </div>
-                        <div class="comments mt-3 align-items-center" style="display: none;">
-                            {% for comment in user_images_comments %}
-                                {% if comment.pictures == image %}
-                                    <div class="card mt-2 comment_card mx-auto" style="width: 80%">
-                                        <div class="card-body d-flex align-items-center">
-                                            <img src="{{ comment.user_profile.profilepicture.image.url }}"
-                                                 class="rounded-circle me-2"
-                                                 style="width: 40px; height: 40px; margin: 5px"
-                                                 alt="{{ comment.user_profile.username }}">
-                                            <div>
-                                                <strong>{{ comment.user_profile.first_name }} {{ comment.user_profile.last_name }}</strong>
-                                                <p style="margin: 5px">{{ comment.content }}</p>
-
-                                                <form id="reaction-form-{{ comment.id }}" class="reaction-form">
-                                                    {% csrf_token %}
-                                                    <button type="button" class="btn btn-link p-0"
-                                                            onclick="submitReaction('{{ comment.id }}', 'like')">
-                                                        <i class="fas fa-thumbs-up" style="color: #3b5998"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-link p-0"
-                                                            onclick="submitReaction('{{ comment.id }}', 'like')">
-                                                        <i class="fas fa-heart" style="color: #dc143c"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-link p-0"
-                                                            onclick="submitReaction('{{ comment.id }}', 'like')">
-                                                        <i class="fas fa-smile" style="color: #ffd700"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-link p-0"
-                                                            onclick="submitReaction('{{ comment.id }}', 'like')">
-                                                        <i class="fas fa-angry" style="color: #ff0000;"></i>
-                                                    </button>
-
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                            <form method="post" action="{% url 'profile_dashboard' %}" id="comment-form"
-                                  class="mx-auto" style="width: 80%">
-                                {% csrf_token %}
-                                <input type="hidden" name="picture_id" value="{{ image.id }}">
-                                <input type="hidden" name="form_type" value="comment_image_form">
-                                {{ comment_form.as_p }}
-                                <button type="submit" class="btn btn-primary btn-sm">Comment</button>
-                            </form>
+<div class="card mt-4 mx-auto" style="width: 60%;">
+    <div class="card-body">
+        <div class="d-flex align-items-center">
+            <img src="{{ image.user_profile.profilepicture.image.url }}" class="rounded-circle me-2"
+                 style="width: 40px; height: 40px;" alt="{{ image.user_profile.username }}">
+            <h5 class="card-title">{{ image.user_profile.first_name }} {{ image.user_profile.last_name }}</h5>
+        </div>
+        <img src="{{ image.image.url }}" class="card-img-top" alt="{{ image.description }}">
+        <small class="text-muted" style="margin: 5px">{{ image.uploaded_at }}</small>
+        <div class="mt-3">
+            <form id="reaction-form-{{ image.id }}" class="reaction-image-form">
+                <input type="hidden" name="user_id" value="{{ user_profile.id }}">
+                <p class="reaction-count" style="cursor: pointer; text-decoration: lightgreen" data-image-id="{{ image.id }}">
+                    <!-- Reactions count will be loaded here -->
+                </p>
+                {% csrf_token %}
+                <button type="button" class="btn btn-link p-0 btn-emoticon" onclick="submitReaction('{{ image.id }}', 'like')">
+                    <i class="fas fa-thumbs-up" style="color: #3b5998"></i>
+                </button>
+                <button type="button" class="btn btn-link p-0 btn-emoticon" onclick="submitReaction('{{ image.id }}', 'heart')">
+                    <i class="fas fa-heart" style="color: #dc143c"></i>
+                </button>
+                <button type="button" class="btn btn-link p-0 btn-emoticon" onclick="submitReaction('{{ image.id }}', 'smile')">
+                    <i class="fas fa-smile" style="color: #ffd700"></i>
+                </button>
+                <button type="button" class="btn btn-link p-0 btn-emoticon" onclick="submitReaction('{{ image.id }}', 'rage')">
+                    <i class="fas fa-angry" style="color: #ff0000;"></i>
+                </button>
+            </form>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleComments(this)">
+                Comment
+            </button>
+        </div>
+        <div class="comments mt-3" style="display: none;">
+            {% for comment in user_images_comments %}
+                {% if comment.pictures == image %}
+                    <div class="card mt-2 comment_card mx-auto" style="width: 80%;">
+                        <div class="card-body d-flex align-items-start" style="margin: 0; padding: 0px;">
+                            <img src="{{ comment.user_profile.profilepicture.image.url }}" class="rounded-circle me-2"
+                                 style="width: 40px; height: 40px; margin-right: 10px;" alt="{{ comment.user_profile.username }}">
+                            <div style="flex-grow: 1;">
+                                <strong>{{ comment.user_profile.first_name }} {{ comment.user_profile.last_name }}</strong>
+                                <p style="margin: 5px;">{{ comment.content }}</p>
+                                <div class="reaction-form-container mt-4">
+    <form id="reaction-form-{{ comment.id }}" class="reaction-form d-flex align-items-center">
+        <input type="hidden" name="user_id" value="{{ user_profile.id }}">
+        {% csrf_token %}
+        <button type="button" class="btn btn-link btn-emoticon-comment"  onclick="submitCommentReaction('{{ comment.id }}', 'like')">
+            <i class="fas fa-thumbs-up" style="color: #3b5998;"></i>
+        </button>
+        <button type="button" class="btn btn-link btn-emoticon-comment"  onclick="submitCommentReaction('{{ comment.id }}', 'heart')">
+            <i class="fas fa-heart btn-emoticon" style="color: #dc143c;"></i>
+        </button>
+        <button type="button" class="btn btn-link  btn-emoticon-comment" onclick="submitCommentReaction('{{ comment.id }}', 'smile')">
+            <i class="fas fa-smile btn-emoticon" style="color: #ffd700;"></i>
+        </button>
+        <button type="button" class="btn btn-link btn-emoticon-comment"  onclick="submitCommentReaction('{{ comment.id }}', 'rage')">
+            <i class="fas fa-angry btn-emoticon" style="color: #ff0000;"></i>
+        </button>
+    </form>
+    <p class="comment-reaction-count " style="cursor: pointer; margin: 0; padding: 0" data-comment-id="{{ comment.id }}">
+        Loading reactions...
+    </p>
+</div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                {% endif %}
+            {% endfor %}
+            <form method="post" action="{% url 'profile_dashboard' %}" id="comment-form" class="mx-auto mt-2" style="width: 80%;">
+                {% csrf_token %}
+                <input type="hidden" name="picture_id" value="{{ image.id }}">
+                <input type="hidden" name="form_type" value="comment_image_form">
+                {{ comment_form.as_p }}
+                <button type="submit" class="btn btn-primary btn-sm">Comment</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
                 <!-- Modal for Reactions -->
                 <div class="modal fade" id="reactionsModal" tabindex="-1" aria-labelledby="reactionsModalLabel"
                      aria-hidden="true">
@@ -188,52 +243,146 @@
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title" id="reactionsModalLabel">Reactions</h5>
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
+
                             </div>
                             <div class="modal-body" id="reactionsModalBody">
                                 <!-- Reactions will be loaded here -->
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                            </div>
+
                         </div>
                     </div>
                 </div>
-            {% endfor %}
+
         </div>
     </div>
     <script>
-        function submitReaction(imageId, emoticonType) {
-            let data = {
-                'image_id': imageId,
-                'emoticon_type': emoticonType,
-                'user_id': $('input[name="user_id"]').val(),
-            };
-
-            $.ajax({
-                url: '{% url "add_emoticon" %}',
-                method: 'POST',
-                data: JSON.stringify(data),
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest",
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                success: function (response) {
-                    if (response.success) {
-                        console.log(response)
-                    } else {
-                        console.error('Error:', response.error);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    console.error('Error:', error);
+    $(document).ready(function () {
+    function updateCommentReactionCount(commentId) {
+        console.log(1)
+        $.ajax({
+            url: '{% url "get_comment_reactions" %}',
+            method: 'GET',
+            data: {
+                'comment_id': commentId
+            },
+            success: function (response) {
+                if (response.success) {
+                    let reaction_count = response.reactions.length;
+                    let reactionCountElem = $(`p[data-comment-id="${commentId}"]`);
+                    reactionCountElem.text(`${reaction_count} people like this`);
+                } else {
+                    console.error('Error:', response.error);
                 }
-            });
-        }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
 
-        $(document).ready(function () {
+    $('.comment-reaction-count').each(function () {
+        let commentId = $(this).data('comment-id');
+        updateCommentReactionCount(commentId);
+    });
+
+    $('.comment-reaction-count').on('click', function () {
+        let commentId = $(this).data('comment-id');
+
+        $.ajax({
+            url: '{% url "get_comment_reactions" %}',
+            method: 'GET',
+            data: {
+                'comment_id': commentId
+            },
+            success: function (response) {
+                if (response.success) {
+                    let reactions = response.reactions;
+                    let modalBody = $('#reactionsModalBody');
+                    modalBody.empty();
+                    const icons = {
+                        'like': '<i class="fas fa-thumbs-up" style="color: #3b5998"></i>',
+                        'heart': '<i class="fas fa-heart" style="color: #dc143c"></i>',
+                        'smile': '<i class="fas fa-smile" style="color: #ffd700"></i>',
+                        'rage': '<i class="fas fa-angry" style="color: #ff0000;"></i>'
+                    }
+
+                    reactions.forEach(function (reaction) {
+                        let userProfileImg = reaction.user_profile_img ? `<img src="${reaction.user_profile_img}" alt="Profile Picture" style="width: 30px; height: 30px; margin: 5px;">` : '';
+                        modalBody.append('<div class="reaction-item">' +
+                            userProfileImg +
+                            '<span style="margin-top: 5px">' + reaction.user_first_name + ' ' + reaction.user_second_name + ' reacted with ' + icons[reaction.type] + '</span>' +
+                            '</div>');
+                    });
+
+                    $('#reactionsModal').modal('show');
+                } else {
+                    console.error('Error:', response.error);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    });
+
+    window.submitCommentReaction = function (commentId, emoticonType) {
+        let data = {
+            'comment_id': commentId,
+            'emoticon_type': emoticonType,
+            'user_id': $('input[name="user_id"]').val(),
+        };
+
+        $.ajax({
+            url: '{% url "add_comment_emoticon" %}',
+            method: 'POST',
+            data: JSON.stringify(data),
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function (response) {
+                if (response.success) {
+                    console.log(response)
+                    updateCommentReactionCount(commentId);
+                } else {
+                    console.error('Error:', response.error);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+});
+
+$(document).ready(function () {
+    function updateReactionCount(imageId) {
+        $.ajax({
+            url: '{% url "get_reactions" %}',
+            method: 'GET',
+            data: {
+                'image_id': imageId
+            },
+            success: function (response) {
+                if (response.success) {
+                    let reaction_count = response.reactions.length;
+                    let reactionCountElem = $(`p[data-image-id="${imageId}"]`);
+                    reactionCountElem.text(`${reaction_count} people react on this`);
+                } else {
+                    console.error('Error:', response.error);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+
+    $('.reaction-count').each(function () {
+        let imageId = $(this).data('image-id');
+        updateReactionCount(imageId);
+    });
+
     $('.reaction-count').on('click', function () {
         let imageId = $(this).data('image-id');
 
@@ -249,15 +398,11 @@
                     let modalBody = $('#reactionsModalBody');
                     modalBody.empty();
                     const icons = {
-                        'like' : '<i class="fas fa-thumbs-up" style="color: #3b5998"></i>',
-                        'heart' :'<i class="fas fa-heart" style="color: #dc143c"></i>',
+                        'like': '<i class="fas fa-thumbs-up" style="color: #3b5998"></i>',
+                        'heart': '<i class="fas fa-heart" style="color: #dc143c"></i>',
                         'smile': '<i class="fas fa-smile" style="color: #ffd700"></i>',
                         'rage': '<i class="fas fa-angry" style="color: #ff0000;"></i>'
                     }
-
-                    let reaction_count = reactions.length;
-                    let reactionCountElem = $(`p[data-image-id="${imageId}"]`);
-                    reactionCountElem.text(`${reaction_count} people like this`);
 
                     reactions.forEach(function (reaction) {
                         let userProfileImg = reaction.user_profile_img ? `<img src="${reaction.user_profile_img}" alt="Profile Picture" style="width: 30px; height: 30px; margin-right: 10px;">` : '';
@@ -277,9 +422,138 @@
             }
         });
     });
-});
-    </script>
 
+    window.submitReaction = function (imageId, emoticonType) {
+        let data = {
+            'image_id': imageId,
+            'emoticon_type': emoticonType,
+            'user_id': $('input[name="user_id"]').val(),
+        };
+
+        $.ajax({
+            url: '{% url "add_emoticon" %}',
+            method: 'POST',
+            data: JSON.stringify(data),
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function (response) {
+                if (response.success) {
+                    console.log(response)
+                    updateReactionCount(imageId);
+                } else {
+                    console.error('Error:', response.error);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+});
+
+$(document).ready(function () {
+    function updatePostReactions(postId) {
+        $.ajax({
+            url: '{% url "get_post_reaction_count" %}',
+            method: 'GET',
+            data: {
+                'post_id': postId
+            },
+            success: function (response) {
+                if (response.success) {
+                    let reactionCountElement = $('.post-reaction-count[data-post-id="' + postId + '"]');
+                    reactionCountElement.text(response.reaction_count + ' people react on this');
+                } else {
+                    console.error('Error:', response.error);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+
+    $('.post-reaction-count').each(function () {
+        let postId = $(this).data('post-id');
+        updatePostReactions(postId);
+    });
+
+    function showPostReactionsModal(postId, emoticonType) {
+        $.ajax({
+            url: '{% url "add_post_emoticon" %}',
+            method: 'GET',
+            data: {
+                'post_id': postId,
+                'emoticon_type': emoticonType,
+                'user_id': $('input[name="user_id"]').val(),
+            },
+            success: function (response) {
+                if (response.success) {
+                    let reactions = response.reactions;
+                    let modalBody = $('#reactionsModalBody');
+                    modalBody.empty();
+                    const icons = {
+                        'like': '<i class="fas fa-thumbs-up" style="color: #3b5998"></i>',
+                        'heart': '<i class="fas fa-heart" style="color: #dc143c"></i>',
+                        'smile': '<i class="fas fa-smile" style="color: #ffd700"></i>',
+                        'rage': '<i class="fas fa-angry" style="color: #ff0000;"></i>'
+                    }
+
+                    reactions.forEach(function (reaction) {
+                        let userProfileImg = reaction.user_profile_img ? `<img src="${reaction.user_profile_img}" alt="Profile Picture" style="width: 30px; height: 30px; margin-right: 10px;">` : '';
+                        modalBody.append('<div class="reaction-item">' +
+                            userProfileImg +
+                            '<span>' + reaction.user_first_name + ' ' + reaction.user_second_name + ' reacted with ' + icons[reaction.type] + '</span>' +
+                            '</div>');
+                    });
+
+                    $('#reactionsModal').modal('show');
+                } else {
+                    console.error('Error:', response.error);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+
+    $(document).on('click', '.post-reaction-count', function () {
+        let postId = $(this).data('post-id');
+        showPostReactionsModal(postId);
+    });
+
+    window.submitPostReaction = function (postId, emoticonType) {
+        let data = {
+            'post_id': postId,
+            'emoticon_type': emoticonType,
+            'user_id': $('input[name="user_id"]').val(),
+        };
+
+        $.ajax({
+            url: '{% url "add_post_emoticon" %}',
+            method: 'POST',
+            data: data,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function (response) {
+                if (response.success) {
+                    updatePostReactions(postId, emoticonType);
+                } else {
+                    console.error('Error:', response.error);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+});
+</script>
 
 
 
