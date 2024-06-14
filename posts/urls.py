@@ -5,7 +5,8 @@ from django.urls import path
 from posts.views import UserPostListView, CreateAlbumView, UploadImageView, AlbumDetailView, AlbumDeleteView, \
     AddCommentView, AddEmoticonView, ImageDetailView, SendFriendRequestView, FriendRequestsView, \
     AcceptFriendRequestView, RejectFriendRequestView, FriendsListView, AddEmotIconComments, GetReactionsView, \
-    GetCommentReactionsView, GetPostReactionCountView, AddPostEmoticonView
+    GetCommentReactionsView, GetPostReactionCountView, AddPostEmoticonView, CommentEmoticonCountView, \
+    PostEmoticonCountView, ImgEmoticonCountView
 
 urlpatterns = ([
                    path('', UserPostListView.as_view(), name='profile_dashboard'),
@@ -29,6 +30,12 @@ urlpatterns = ([
                    path('get_reactions/', GetReactionsView.as_view(), name='get_reactions'),
                    path('get_post_reaction_count/', GetPostReactionCountView.as_view(), name='get_post_reaction_count'),
                    path('add_post_emoticon/', AddPostEmoticonView.as_view(), name='add_post_emoticon'),
+                   path('get_comment_emoticon_count/<int:pk>/', CommentEmoticonCountView.as_view(),
+                        name='get_comment_emoticon_count'),
+                   path('get_post_emoticon_count/<int:pk>/', PostEmoticonCountView.as_view(),
+                        name='get_post_emoticon_count'),
+                   path('get_img_emoticon_count/<int:pk>/', ImgEmoticonCountView.as_view(),
+                        name='get_img_emoticon_count')
 
                ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
                + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT))

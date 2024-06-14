@@ -10,7 +10,7 @@ from django.views.generic import ListView, DeleteView
 from Profiles.models import UserProfile, FriendRequest
 from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm, EmoticonForm
 from posts.models import Post, Comment, Album, Emoticon, UserImage
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 
 
 class UserPostListView(LoginRequiredMixin, ListView):
@@ -21,36 +21,30 @@ class UserPostListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_profile = UserProfile.objects.get(user=self.request.user)
-
         friends = user_profile.friends.all()
+
         posts = Post.objects.filter(
             Q(user_profile__in=friends) | Q(user_profile=user_profile)
+        ).select_related('user_profile').prefetch_related(
+            Prefetch('comment_set', queryset=Comment.objects.order_by('-created_at')),
+            Prefetch('emoticon_set', queryset=Emoticon.objects.filter(related_comment__isnull=True, related_user_img__isnull=True))
         ).order_by('-created_at')
 
         user_images = UserImage.objects.filter(
             Q(user_profile__in=friends) | Q(user_profile=user_profile)
+        ).select_related('user_profile').prefetch_related(
+            Prefetch('emoticon_set', queryset=Emoticon.objects.filter(related_comment__isnull=True)),
+            Prefetch('comment_set', queryset=Comment.objects.order_by('-created_at'))
         ).order_by('-uploaded_at')
-        user_images_emoticon = Emoticon.objects.filter(related_user_img__in=user_images.values_list('id', flat=True))
-        user_images_comments = Comment.objects.filter(pictures__in=user_images).order_by('-created_at')
+        post_form = PostCreationForm()
+        comment_form = CommentCreationForm()
 
-        post_comments = Comment.objects.filter(post__in=posts).order_by('-created_at')
-        post_emoticons = Emoticon.objects.filter(post__in=posts)
-        user_images_comments_emoticon = Emoticon.objects.filter(
-            Q(related_comment__in=post_comments) | Q(related_comment__in=user_images_comments))
-        comment_emoticons = Emoticon.objects.filter(related_comment__in=post_comments)
-
+        context['user_profile'] = user_profile
+        context['friends'] = friends
         context['posts'] = posts
         context['user_images'] = user_images
-        context['post_comments'] = post_comments
-        context['user_images_emoticon'] = user_images_emoticon
-        context['user_images_comments'] = user_images_comments
-        context['user_images_comments_emoticon'] = user_images_comments_emoticon
-        context['post_emoticons'] = post_emoticons
-        context['comment_emoticons'] = comment_emoticons
-        context['user_profiles'] = UserProfile.objects.exclude(Q(user=self.request.user) | Q(friends=user_profile))
-        context['user_profile'] = user_profile
-        context['post_form'] = PostCreationForm()
-        context['comment_form'] = CommentCreationForm()
+        context['post_form'] = post_form
+        context['comment_form'] = comment_form
         return context
 
     def post(self, request, *args, **kwargs):
@@ -88,6 +82,26 @@ class UserPostListView(LoginRequiredMixin, ListView):
 
         return self.get(request, *args, **kwargs)
 
+
+class CommentEmoticonCountView(View):
+    def get(self, request, pk, *args, **kwargs):
+        comment = get_object_or_404(Comment, pk=pk)
+        emoticon_count = comment.emoticon_set.count()
+        return JsonResponse({'count': emoticon_count})
+
+
+class ImgEmoticonCountView(View):
+    def get(self, request, pk, *args, **kwargs):
+        img = get_object_or_404(UserImage, pk=pk)
+        emoticon_count = img.emoticon_set.count()
+        return JsonResponse({'count': emoticon_count})
+
+
+class PostEmoticonCountView(View):
+    def get(self, request, pk, *args, **kwargs):
+        post = get_object_or_404(Post, pk=pk)
+        emoticon_count = post.emoticon_set.count()
+        return JsonResponse({'count': emoticon_count})
 
 class CreateAlbumView(View, LoginRequiredMixin):
     form_class = AlbumForm
@@ -174,11 +188,17 @@ class AlbumDetailView(View, LoginRequiredMixin):
 class AddCommentView(View, LoginRequiredMixin):
     try:
         def post(self, request):
-            data = json.loads(request.body)
-            image_id = data.get('image_id')
+            data = request.POST
+
             content = data.get('content')
             user_id = data.get('user_id')
-            Comment.objects.create(content=content, pictures_id=image_id, user_profile_id=user_id)
+            if data.get('image_id'):
+                image_id = data.get('post_id')
+                Comment.objects.create(content=content, pictures_id=image_id, user_profile_id=user_id)
+
+            elif data.get('post_id'):
+                post_id = data.get('post_id')
+                Comment.objects.create(content=content, post_id=post_id, user_profile_id=user_id)
             return JsonResponse({'success': True})
 
     except Exception as e:
@@ -233,7 +253,7 @@ class AddEmotIconComments(View, LoginRequiredMixin):
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-class AddEmoticonView(View, LoginRequiredMixin):
+class AddEmoticonView(View):
     def post(self, request):
         try:
             data = json.loads(request.body)
@@ -258,11 +278,9 @@ class AddEmoticonView(View, LoginRequiredMixin):
                 if emoticon.emoticon_type == emoticon_type:
                     emoticon.delete()
                 else:
-
                     emoticon.emoticon_type = emoticon_type
                     emoticon.save()
             except Emoticon.DoesNotExist:
-
                 Emoticon.objects.create(
                     emoticon_type=emoticon_type,
                     related_user_img=user_image,
@@ -333,7 +351,7 @@ class SendFriendRequestView(LoginRequiredMixin, View):
         from_user_profile = request.user.userprofile
         if not FriendRequest.objects.filter(from_user=from_user_profile,
                                             to_user=to_user_profile).exists() and not from_user_profile.friends.filter(
-                id=to_user_profile.id).exists():
+            id=to_user_profile.id).exists():
             from_user_profile.send_friend_request(to_user_profile)
         return redirect('profile_dashboard')
 
@@ -400,22 +418,22 @@ class GetReactionsView(View):
 
 
 class AddPostEmoticonView(View):
-    def get(self, request, *args, **kwargs):
-        post_id = request.GET.get('post_id')
-        reactions = Emoticon.objects.filter(post_id=post_id).select_related('related_user')
-
-
-        reactions_data = [{'user_first_name': reaction.related_user.first_name, 'type': reaction.emoticon_type,
-                           'user_second_name': reaction.related_user.last_name,
-                           'user_profile_img': reaction.related_user.profilepicture.image.url
-                           } for reaction in reactions]
-
-        return JsonResponse({'success': True, 'reactions': reactions_data})
+    # def get(self, request, *args, **kwargs):
+    #     post_id = request.GET.get('post_id')
+    #     reactions = Emoticon.objects.filter(post_id=post_id).select_related('related_user')
+    #
+    #     reactions_data = [{'user_first_name': reaction.related_user.first_name, 'type': reaction.emoticon_type,
+    #                        'user_second_name': reaction.related_user.last_name,
+    #                        'user_profile_img': reaction.related_user.profilepicture.image.url
+    #                        } for reaction in reactions]
+    #
+    #     return JsonResponse({'success': True, 'reactions': reactions_data})
 
     def post(self, request, *args, **kwargs):
-        post_id = request.POST.get('post_id')
-        emoticon_type = request.POST.get('emoticon_type')
-        user_id = request.POST.get('user_id')
+        data = json.loads(request.body)
+        post_id = data.get('post_id')
+        emoticon_type = data.get('emoticon_type')
+        user_id = data.get('user_id')
         existing_emoticon = Emoticon.objects.filter(post_id=post_id, related_user_id=user_id).first()
 
         if existing_emoticon:
