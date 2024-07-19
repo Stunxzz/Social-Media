@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <title>Chat</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <h1>Chat</h1>
+    <div id="friends-list">
+        <ul class="list-group" id="friend-list">
+            <!-- Friends list will be loaded here -->
+        </ul>
+    </div>
+    <div id="chat-window" style="display:none;">
+        <h3>Chat with <span id="chat-with"></span></h3>
+        <textarea id="chat-log" cols="100" rows="20" readonly></textarea>
+        <input id="chat-message-input" type="text" size="100">
+        <button id="chat-message-submit">Send</button>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        var chatSocket = null;
+        var currentFriendId = null;
+
+        function startChat(friendId, friendName) {
+            if (chatSocket !== null) {
+                chatSocket.close();
+            }
+
+            $('#chat-window').show();
+            $('#chat-with').text(friendName);
+
+            chatSocket = new WebSocket('ws://' + window.location.host + '/ws/chat/' + friendId + '/');
+
+            chatSocket.onmessage = function (e) {
+                const data = JSON.parse(e.data);
+                $('#chat-log').val($('#chat-log').val() + (data.message + '\n'));
+                $('#chat-log').scrollTop($('#chat-log')[0].scrollHeight); // Scroll to the bottom
+            };
+
+            chatSocket.onopen = function () {
+                console.log('Chat socket opened');
+            };
+
+            chatSocket.onclose = function (e) {
+                console.error('Chat socket closed unexpectedly');
+            };
+
+            $('#chat-message-submit').off('click').on('click', function () {
+                const messageInputDom = $('#chat-message-input');
+                const message = messageInputDom.val();
+                if (message.trim() !== '') {
+                    chatSocket.send(JSON.stringify({
+                        'message': message
+                    }));
+                    messageInputDom.val('');
+                }
+            });
+
+            $('#chat-message-input').on('keypress', function (e) {
+                if (e.which === 13) {  // Enter key
+                    e.preventDefault();
+                    $('#chat-message-submit').click();
+                }
+            });
+        }
+
+        $.ajax({
+            url: '{% url "friends" %}',
+            method: 'GET',
+            success: function (data) {
+                let friendsList = '';
+                data.forEach(function (friend) {
+                    friendsList += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${friend.first_name} ${friend.last_name}
+                        <button class="btn btn-primary btn-sm start-chat" data-id="${friend.id}" data-name="${friend.first_name} ${friend.last_name}">Chat</button>
+                    </li>`;
+                });
+                $('#friend-list').html(friendsList);
+
+                $('.start-chat').on('click', function () {
+                    const friendId = $(this).data('id');
+                    const friendName = $(this).data('name');
+                    console.log('Clicked Friend ID:', friendId);
+                    startChat(friendId, friendName);
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

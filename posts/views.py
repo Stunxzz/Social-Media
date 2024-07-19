@@ -9,7 +9,7 @@ from django.views import View
 from django.views.generic import ListView, DeleteView
 from Profiles.models import UserProfile, FriendRequest
 from posts.forms import PostCreationForm, CommentCreationForm, AlbumForm, UserImageForm, EmoticonForm
-from posts.models import Post, Comment, Album, Emoticon, UserImage
+from posts.models import Post, Comment, Album, Emoticon, UserImage, ProfilePicture
 from django.db.models import Q, Prefetch
 
 
@@ -403,11 +403,32 @@ class FriendsListView(LoginRequiredMixin, ListView):
         context['friends_queryset'] = self.get_queryset()
         return context
 
-
 class GetReactionsView(View):
     def get(self, request, *args, **kwargs):
-        image_id = request.GET.get('image_id')
-        reactions = Emoticon.objects.filter(related_user_img_id=image_id).select_related('related_user')
+        item_type = request.GET.get('type')
+        item_id = request.GET.get('id')
+
+        if item_type == 'post':
+            reactions = Emoticon.objects.filter(post_id=item_id).select_related('related_user')
+        elif item_type == 'comment':
+            reactions = Emoticon.objects.filter(related_comment_id=item_id).select_related('related_user')
+        elif item_type == 'image':
+            reactions = Emoticon.objects.filter(related_user_img_id=item_id).select_related('related_user')
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid type'})
+
+        reactions_data = [{'user_first_name': reaction.related_user.first_name,
+                           'type': reaction.emoticon_type,
+                           'user_second_name': reaction.related_user.last_name,
+                           'user_profile_img': reaction.related_user.profilepicture.image.url}
+                          for reaction in reactions]
+
+        return JsonResponse({'success': True, 'reactions': reactions_data})
+
+class AddPostEmoticonView(View):
+    def get(self, request, *args, **kwargs):
+        post_id = request.GET.get('post_id')
+        reactions = Emoticon.objects.filter(post_id=post_id).select_related('related_user')
 
         reactions_data = [{'user_first_name': reaction.related_user.first_name, 'type': reaction.emoticon_type,
                            'user_second_name': reaction.related_user.last_name,
@@ -415,19 +436,6 @@ class GetReactionsView(View):
                            } for reaction in reactions]
 
         return JsonResponse({'success': True, 'reactions': reactions_data})
-
-
-class AddPostEmoticonView(View):
-    # def get(self, request, *args, **kwargs):
-    #     post_id = request.GET.get('post_id')
-    #     reactions = Emoticon.objects.filter(post_id=post_id).select_related('related_user')
-    #
-    #     reactions_data = [{'user_first_name': reaction.related_user.first_name, 'type': reaction.emoticon_type,
-    #                        'user_second_name': reaction.related_user.last_name,
-    #                        'user_profile_img': reaction.related_user.profilepicture.image.url
-    #                        } for reaction in reactions]
-    #
-    #     return JsonResponse({'success': True, 'reactions': reactions_data})
 
     def post(self, request, *args, **kwargs):
         data = json.loads(request.body)
@@ -447,3 +455,23 @@ class AddPostEmoticonView(View):
                                     post_id=post_id)
 
         return JsonResponse({'success': True})
+
+class MakeProfilePictureView(View):
+    def post(self, request, *args, **kwargs):
+        data = json.loads(request.body.decode('utf-8'))
+        image_id = data.get('image_id')
+        print(image_id)
+
+
+        if not image_id:
+            return JsonResponse({'success': False, 'error': 'Missing image_id'})
+
+        try:
+
+            image = get_object_or_404(UserImage, id=image_id)
+            ProfilePicture.objects.filter(user_profile_id=request.user.id).update(image=image.image)
+
+            return JsonResponse({'success': True})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})

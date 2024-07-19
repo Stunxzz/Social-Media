@@ -60,6 +60,7 @@
                         <button type="button" class="btn btn-secondary" id="nextImage"><i
                                 class="fas fa-arrow-right"></i></button>
                     </div>
+                     <button type="button" class="btn btn-primary" id="makeProfilePicBtn">Make Profile Picture</button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
@@ -389,6 +390,33 @@
                 }
             });
         });
+        $('#makeProfilePicBtn').click(function () {
+        if (currentImageId === null) {
+            console.error('No image ID is set');
+            return;
+        }
+
+        $.ajax({
+            url: '/posts/make_profile_picture/',
+            method: 'POST',
+            data: JSON.stringify({ image_id: currentImageId }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function (response) {
+                if (response.success) {
+                    alert('Image set as profile picture successfully!');
+
+                } else {
+                    console.error('Error:', response.error);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    });
 
     </script>
 

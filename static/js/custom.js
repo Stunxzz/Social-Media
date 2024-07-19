@@ -2,16 +2,16 @@ document.addEventListener("DOMContentLoaded", function () {
             const toggleButton = document.getElementById('user-icon');
             const closeButton = document.getElementById('close-sidebar');
             const sidebar = document.getElementById('side-bar');
-            const mainContent = document.getElementById('main-content');
+            // const mainContent = document.getElementById('main-content');
 
             toggleButton.addEventListener('click', function () {
                 sidebar.style.display = 'block';
-                mainContent.classList.add('shifted');
+                // mainContent.classList.add('shifted');
             });
 
             closeButton.addEventListener('click', function () {
                 sidebar.style.display = 'none';
-                mainContent.classList.remove('shifted');
+                // mainContent.classList.remove('shifted');
             });
         });
 

@@ -6,8 +6,8 @@ from Profiles.models import UserProfile
 
 class ProfilePicture(models.Model):
     user_profile = models.OneToOneField('Profiles.UserProfile', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+    image = models.ImageField(upload_to='profile_pictures/')
+
 
 
 

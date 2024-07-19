@@ -37,10 +37,10 @@
                 <h3>People You May Know</h3>
             </div>
             {% for profile in friends %}
-                <div class="col-6 col-md-3 mb-3 p-2" style="width: 210px; margin: 5px">
-                    <div class="card" style="width: 210px; align-items: center">
+                <div class="col-2 col-md-2" >
+                    <div class="card">
                         <img src="{{ profile.profilepicture.image.url }}" class="card-img-top img-thumbnail"
-                             style="height: 150px; width: 200px; object-fit: cover;">
+>
                         <div class="card-body p-2">
                             <h6 class="card-title mb-1">{{ profile.first_name }} {{ profile.last_name }}</h6>
                             <a href="#" class="btn btn-primary btn-sm">View</a>
@@ -95,10 +95,9 @@
                                     <i class="fas fa-angry" style="color: #ff0000;"></i>
                                 </button>
                             </form>
-                            <p class="post-reaction-count mt-2" style="cursor: pointer; margin: 0;"
-                               data-post-id="{{ post.id }}">
-                                {{ post.emoticon_set.all|length }} people like this
-                            </p>
+                            <p class="post-reaction-count mt-2" style="cursor: pointer; margin: 0;" data-post-id="{{ post.id }}" onclick="showReactionsModal('{{ post.id }}', 'post')">
+    {{ post.emoticon_set.all|length }} people like this
+</p>
                             <button type="button" class="btn btn-secondary btn-sm" onclick="toggleComments(this)">
                                 Comment
                             </button>
@@ -140,11 +139,9 @@
                                                         <i class="fas fa-angry" style="color: #ff0000;"></i>
                                                     </button>
                                                 </form>
-                                                <p class="comment-reaction-count mt-2"
-                                                   style="cursor: pointer; margin: 0;"
-                                                   data-comment-id="{{ comment.id }}">
-                                                    {{ comment.emoticon_set.all|length }} people like this
-                                                </p>
+                                               <p class="comment-reaction-count mt-2" style="cursor: pointer; margin: 0;" data-comment-id="{{ comment.id }}" onclick="showReactionsModal('{{ comment.id }}', 'comment')">
+    {{ comment.emoticon_set.all|length }} people like this
+</p>
                                             </div>
                                         </div>
                                     </div>
@@ -179,10 +176,9 @@
                         <div class="mt-3">
                             <form id="reaction-form-{{ image.id }}" class="reaction-image-form">
                                 <input type="hidden" name="user_id" value="{{ user_profile.id }}">
-                                <p class="reaction-count" style="cursor: pointer; text-decoration: lightgreen"
-                                   data-image-id="{{ image.id }}">
-                                    {{ image.emoticon_set.all|length }} people like this
-                                </p>
+                                <p class="reaction-count" style="cursor: pointer; text-decoration: lightgreen" data-image-id="{{ image.id }}" onclick="showReactionsModal('{{ image.id }}', 'image')">
+    {{ image.emoticon_set.all|length }} people like this
+</p>
                                 {% csrf_token %}
                                 <button type="button" class="btn btn-link p-0 btn-emoticon"
                                         onclick="submitReaction('{{ image.id }}', 'like')">
@@ -245,9 +241,7 @@
                                                            style="color: #ff0000;"></i>
                                                     </button>
                                                 </form>
-                                                <p class="comment-reaction-count"
-                                                   style="cursor: pointer; margin: 0; padding: 0"
-                                                   data-comment-id="{{ comment.id }}">
+                                                <p class="comment-reaction-count mt-2" style="cursor: pointer; margin: 0;" data-comment-id="{{ comment.id }}" onclick="showReactionsModal('{{ comment.id }}', 'comment')">
                                                     {{ comment.emoticon_set.all|length }} people like this
                                                 </p>
                                             </div>
@@ -353,7 +347,7 @@
             'emoticon_type': emoticonType,
             'user_id': $('input[name="user_id"]').val(),
         };
-        console.log(data)
+
 
         $.ajax({
             url: '{% url "add_emoticon" %}',
@@ -424,283 +418,44 @@
             }
         });
     }
+    function showReactionsModal(id, type) {
+    $.ajax({
+        url: '{% url "get_reactions" %}',
+        method: 'GET',
+        data: {
+            'type': type,
+            'id': id
+        },
+
+        success: function(response) {
+        let emotIcons = {
+        'like': '<i class="fas fa-thumbs-up" style="color: #3b5998;"></i>',
+        'heart': '<i class="fas fa-heart" style="color: #dc143c"></i>',
+        'smile': '<i class="fas fa-smile btn-emoticon" style="color: #ffd700;"></i>',
+        'rage': '<i class="fas fa-angry btn-emoticon"style="color: #ff0000;"></i>'
+
+        }
+            if (response.success) {
+                let reactionsHtml = response.reactions.map(reaction => `
+                    <div class="d-flex align-items-center mb-2">
+                        <img src="${reaction.user_profile_img}" class="rounded-circle me-2" style="width: 40px; height: 40px;" alt="${reaction.user_first_name}">
+                        <div>
+                            <strong>${reaction.user_first_name} ${reaction.user_second_name}</strong>
+                            <span>Reacted with </span>
+                            <span>${emotIcons[reaction.type]}</span>
+                        </div>
+                    </div>
+                `).join('');
+                $('#reactionsModalBody').html(reactionsHtml);
+                $('#reactionsModal').modal('show');
+            } else {
+                console.error('Error:', response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error:', error);
+        }
+    });
+}
 </script>
 {% endblock %}
-
-
-
-
-{#    $(document).ready(function () {#}
-{#    function updateCommentReactionCount(commentId) {#}
-{##}
-{#        $.ajax({#}
-{#            url: '{% url "get_comment_reactions" %}',#}
-{#            method: 'GET',#}
-{#            data: {#}
-{#                'comment_id': commentId#}
-{#            },#}
-{#            success: function (response) {#}
-{#                if (response.success) {#}
-{#                    let reaction_count = response.reactions.length;#}
-{#                    let reactionCountElem = $(`p[data-comment-id="${commentId}"]`);#}
-{#                    reactionCountElem.text(`${reaction_count} people like this`);#}
-{#                } else {#}
-{#                    console.error('Error:', response.error);#}
-{#                }#}
-{#            },#}
-{#            error: function (xhr, status, error) {#}
-{#                console.error('Error:', error);#}
-{#            }#}
-{#        });#}
-{#    }#}
-{##}
-{#    $('.comment-reaction-count').each(function () {#}
-{#        let commentId = $(this).data('comment-id');#}
-{#        updateCommentReactionCount(commentId);#}
-{#    });#}
-{##}
-{#    $('.comment-reaction-count').on('click', function () {#}
-{#        let commentId = $(this).data('comment-id');#}
-{##}
-{#        $.ajax({#}
-{#            url: '{% url "get_comment_reactions" %}',#}
-{#            method: 'GET',#}
-{#            data: {#}
-{#                'comment_id': commentId#}
-{#            },#}
-{#            success: function (response) {#}
-{#                if (response.success) {#}
-{#                    let reactions = response.reactions;#}
-{#                    let modalBody = $('#reactionsModalBody');#}
-{#                    modalBody.empty();#}
-{#                    const icons = {#}
-{#                        'like': '<i class="fas fa-thumbs-up" style="color: #3b5998"></i>',#}
-{#                        'heart': '<i class="fas fa-heart" style="color: #dc143c"></i>',#}
-{#                        'smile': '<i class="fas fa-smile" style="color: #ffd700"></i>',#}
-{#                        'rage': '<i class="fas fa-angry" style="color: #ff0000;"></i>'#}
-{#                    }#}
-{##}
-{#                    reactions.forEach(function (reaction) {#}
-{#                        let userProfileImg = reaction.user_profile_img ? `<img src="${reaction.user_profile_img}" alt="Profile Picture" style="width: 30px; height: 30px; margin: 5px;">` : '';#}
-{#                        modalBody.append('<div class="reaction-item">' +#}
-{#                            userProfileImg +#}
-{#                            '<span style="margin-top: 5px">' + reaction.user_first_name + ' ' + reaction.user_second_name + ' reacted with ' + icons[reaction.type] + '</span>' +#}
-{#                            '</div>');#}
-{#                    });#}
-{##}
-{#                    $('#reactionsModal').modal('show');#}
-{#                } else {#}
-{#                    console.error('Error:', response.error);#}
-{#                }#}
-{#            },#}
-{#            error: function (xhr, status, error) {#}
-{#                console.error('Error:', error);#}
-{#            }#}
-{#        });#}
-{#    });#}
-{##}
-{#    window.submitCommentReaction = function (commentId, emoticonType) {#}
-{#        let data = {#}
-{#            'comment_id': commentId,#}
-{#            'emoticon_type': emoticonType,#}
-{#            'user_id': $('input[name="user_id"]').val(),#}
-{#        };#}
-{##}
-{#        $.ajax({#}
-{#            url: '{% url "add_comment_emoticon" %}',#}
-{#            method: 'POST',#}
-{#            data: JSON.stringify(data),#}
-{#            headers: {#}
-{#                "X-Requested-With": "XMLHttpRequest",#}
-{#                'X-CSRFToken': '{{ csrf_token }}'#}
-{#            },#}
-{##}
-{#            success: function (response) {#}
-{#                console.log(data)#}
-{#                if (response.success) {#}
-{#                    console.log(response)#}
-{#                    updateCommentReactionCount(commentId);#}
-{#                } else {#}
-{#                    console.error('Error:', response.error);#}
-{#                }#}
-{#            },#}
-{#            error: function (xhr, status, error) {#}
-{#                console.error('Error:', error);#}
-{#            }#}
-{#        });#}
-{#    }#}
-
-{##}
-{#$(document).ready(function () {#}
-{#    function updateReactionCount(imageId) {#}
-{#        $.ajax({#}
-{#            url: '{% url "get_reactions" %}',#}
-{#            method: 'GET',#}
-{#            data: {#}
-{#                'image_id': imageId#}
-{#            },#}
-{#            success: function (response) {#}
-{#                if (response.success) {#}
-{#                    let reaction_count = response.reactions.length;#}
-{#                    let reactionCountElem = $(`p[data-image-id="${imageId}"]`);#}
-{#                    reactionCountElem.text(`${reaction_count} people react on this`);#}
-{#                } else {#}
-{#                    console.error('Error:', response.error);#}
-{#                }#}
-{#            },#}
-{#            error: function (xhr, status, error) {#}
-{#                console.error('Error:', error);#}
-{#            }#}
-{#        });#}
-{#    }#}
-{##}
-{#    $('.reaction-count').each(function () {#}
-{#        let imageId = $(this).data('image-id');#}
-{#        updateReactionCount(imageId);#}
-{#    });#}
-{##}
-{#    $('.reaction-count').on('click', function () {#}
-{#        let imageId = $(this).data('image-id');#}
-{##}
-{#        $.ajax({#}
-{#            url: '{% url "get_reactions" %}',#}
-{#            method: 'GET',#}
-{#            data: {#}
-{#                'image_id': imageId#}
-{#            },#}
-{#            success: function (response) {#}
-{#                if (response.success) {#}
-{#                    let reactions = response.reactions;#}
-{#                    let modalBody = $('#reactionsModalBody');#}
-{#                    modalBody.empty();#}
-{#                    const icons = {#}
-{#                        'like': '<i class="fas fa-thumbs-up" style="color: #3b5998"></i>',#}
-{#                        'heart': '<i class="fas fa-heart" style="color: #dc143c"></i>',#}
-{#                        'smile': '<i class="fas fa-smile" style="color: #ffd700"></i>',#}
-{#                        'rage': '<i class="fas fa-angry" style="color: #ff0000;"></i>'#}
-{#                    }#}
-{##}
-{#                    reactions.forEach(function (reaction) {#}
-{#                        let userProfileImg = reaction.user_profile_img ? `<img src="${reaction.user_profile_img}" alt="Profile Picture" style="width: 30px; height: 30px; margin-right: 10px;">` : '';#}
-{#                        modalBody.append('<div class="reaction-item">' +#}
-{#                            userProfileImg +#}
-{#                            '<span>' + reaction.user_first_name + ' ' + reaction.user_second_name + ' reacted with ' + icons[reaction.type] + '</span>' +#}
-{#                            '</div>');#}
-{#                    });#}
-{##}
-{#                    $('#reactionsModal').modal('show');#}
-{#                } else {#}
-{#                    console.error('Error:', response.error);#}
-{#                }#}
-{#            },#}
-{#            error: function (xhr, status, error) {#}
-{#                console.error('Error:', error);#}
-{#            }#}
-{#        });#}
-{#    });#}
-{##}
-{#    window.submitReaction = function (imageId, emoticonType) {#}
-{#        let data = {#}
-{#            'image_id': imageId,#}
-{#            'emoticon_type': emoticonType,#}
-{#            'user_id': $('input[name="user_id"]').val(),#}
-{#        };#}
-{##}
-{#        $.ajax({#}
-{#            url: '{% url "add_emoticon" %}',#}
-{#            method: 'POST',#}
-{#            data: JSON.stringify(data),#}
-{#            headers: {#}
-{#                "X-Requested-With": "XMLHttpRequest",#}
-{#                'X-CSRFToken': '{{ csrf_token }}'#}
-{#            },#}
-{#            success: function (response) {#}
-{#                if (response.success) {#}
-{#                    console.log(response)#}
-{#                    updateReactionCount(imageId);#}
-{#                } else {#}
-{#                    console.error('Error:', response.error);#}
-{#                }#}
-{#            },#}
-{#            error: function (xhr, status, error) {#}
-{#                console.error('Error:', error);#}
-{#            }#}
-{#        });#}
-{#    }#}
-
-{##}
-{#$(document).ready(function () {#}
-{#    function updatePostReactions(postId) {#}
-{#        $.ajax({#}
-{#            url: '{% url "get_post_reaction_count" %}',#}
-{#            method: 'GET',#}
-{#            data: {#}
-{#                'post_id': postId#}
-{#            },#}
-{#            success: function (response) {#}
-{#                if (response.success) {#}
-{#                    let reactionCountElement = $('.post-reaction-count[data-post-id="' + postId + '"]');#}
-{#                    reactionCountElement.text(response.reaction_count + ' people react on this');#}
-{#                } else {#}
-{#                    console.error('Error:', response.error);#}
-{#                }#}
-{#            },#}
-{#            error: function (xhr, status, error) {#}
-{#                console.error('Error:', error);#}
-{#            }#}
-{#        });#}
-{#    }#}
-{##}
-{#    $('.post-reaction-count').each(function () {#}
-{#        let postId = $(this).data('post-id');#}
-{#        updatePostReactions(postId);#}
-{#    });#}
-{##}
-{#    function showPostReactionsModal(postId, emoticonType) {#}
-{#        $.ajax({#}
-{#            url: '{% url "add_post_emoticon" %}',#}
-{#            method: 'GET',#}
-{#            data: {#}
-{#                'post_id': postId,#}
-{#                'emoticon_type': emoticonType,#}
-{#                'user_id': $('input[name="user_id"]').val(),#}
-{#            },#}
-{#            success: function (response) {#}
-{#                if (response.success) {#}
-{#                    let reactions = response.reactions;#}
-{#                    let modalBody = $('#reactionsModalBody');#}
-{#                    modalBody.empty();#}
-{#                    const icons = {#}
-{#                        'like': '<i class="fas fa-thumbs-up" style="color: #3b5998"></i>',#}
-{#                        'heart': '<i class="fas fa-heart" style="color: #dc143c"></i>',#}
-{#                        'smile': '<i class="fas fa-smile" style="color: #ffd700"></i>',#}
-{#                        'rage': '<i class="fas fa-angry" style="color: #ff0000;"></i>'#}
-{#                    }#}
-{##}
-{#                    reactions.forEach(function (reaction) {#}
-{#                        let userProfileImg = reaction.user_profile_img ? `<img src="${reaction.user_profile_img}" alt="Profile Picture" style="width: 30px; height: 30px; margin-right: 10px;">` : '';#}
-{#                        modalBody.append('<div class="reaction-item">' +#}
-{#                            userProfileImg +#}
-{#                            '<span>' + reaction.user_first_name + ' ' + reaction.user_second_name + ' reacted with ' + icons[reaction.type] + '</span>' +#}
-{#                            '</div>');#}
-{#                    });#}
-{##}
-{#                    $('#reactionsModal').modal('show');#}
-{#                } else {#}
-{#                    console.error('Error:', response.error);#}
-{#                }#}
-{#            },#}
-{#            error: function (xhr, status, error) {#}
-{#                console.error('Error:', error);#}
-{#            }#}
-{#        });#}
-{#    }#}
-{##}
-{#    $(document).on('click', '.post-reaction-count', function () {#}
-{#        let postId = $(this).data('post-id');#}
-{#        showPostReactionsModal(postId);#}
-{#    });#}
-{##}
-
-
-{#</script>#}

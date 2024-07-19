@@ -33,6 +33,7 @@ MEDIA_URL = '/media/'
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,7 +42,19 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Profiles',
     'posts',
+    'chat',
+    'rest_framework',
+    'channels',
+
 ]
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
+ASGI_APPLICATION = 'SocialMedia.asgi.application'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

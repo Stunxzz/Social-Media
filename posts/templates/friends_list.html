@@ -7,7 +7,7 @@
   <h1 class="text-center mt-4">Your Friends</h1>
   <div class="row justify-content-center">
     {% for friend in friends_queryset %}
-      <div class="col-md-2 mb-4">
+      <div class="col-md-3 mb-4">
         <div class="card mx-auto">
           <img src="{{ friend.profilepicture.image.url }}" class="card-img-top" alt="Profile Picture">
           <div class="card-body text-center">
@@ -16,7 +16,7 @@
           </div>
         </div>
       </div>
-      {% if forloop.counter|divisibleby:5 %}
+      {% if forloop.counter|divisibleby:4 %}
         </div><div class="row justify-content-center">
       {% endif %}
     {% endfor %}
